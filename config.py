@@ -1,0 +1,3 @@
+params = {
+    'SymbolsStatisticsFile': 'SymbolsStatistics.txt'
+}
