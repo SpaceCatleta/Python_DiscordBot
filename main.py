@@ -2,10 +2,10 @@ import discord
 import structs
 import TextFile as TFile
 import config
-import sys
 from discord.ext import commands
 from con_config import settings
-import mycommands
+from mycommands import simplecomm
+
 
 # Так как мы указали префикс в settings, обращаемся к словарю с ключом prefix.
 bot = commands.Bot(command_prefix=settings['prefix'])
@@ -13,30 +13,44 @@ guild: discord.Guild
 UserStats = []
 
 
+def mylen(stroke: str):
+    counter: int = 0
+    iscount: bool = True
+    for sym in stroke:
+        if sym == '<':
+            iscount = False
+        elif sym == '>':
+            iscount = True
+            continue
+        if iscount:
+            counter += 1
+    return counter
+
+
 @bot.event
 async def on_ready():
     global guild, UserStats
     guild = bot.get_guild(settings['home_guild_id'])
-    print(len(guild.members))
     readlist = TFile.ReadSymbolsStat(config.params['SymbolsStatisticsFile'])
     if len(readlist) == 0:
         for user in guild.members:
             UserStats.append(structs.userstats(user.id, 0))
     else:
         UserStats = readlist
-
-    print('arrlen-' + str(len(readlist)))
-    print('loading finished')
-
+    TCh: discord.channel = bot.get_channel(settings['home_guild_logs_channel'])
+    await TCh.send('```[bot online]```')
 
 
 @bot.event
 async def on_message(mes: discord.Message):
     if mes.author.bot:
         return
+    global UserStats
     stat: structs.userstats = structs.searchid(UserStats, mes.author.id)
     if stat is not None:
-        stat.counter += len(mes.content)
+        stat.counter += mylen(mes.content)
+    else:
+        UserStats.append(structs.userstats(ID=mes.author.id, Counter=mylen(mes.content)))
     await bot.process_commands(mes)
 
 
@@ -49,7 +63,7 @@ async def info(ctx: discord.ext.commands.Context, **kwargs):
 @bot.command()
 async def tm(ctx: discord.ext.commands.Context, **kwargs):
     await ctx.message.delete()
-    await mycommands.hello(ctx)
+    await simplecomm.hello(ctx)
 
 
 @bot.command()
@@ -64,10 +78,33 @@ async def stats(ctx: discord.ext.commands.Context):
     global UserStats
     await ctx.message.delete()
     user: discord.abc.User = ctx.message.mentions[0] if len(ctx.message.mentions) > 0 else ctx.author
-    print(user.name)
     stat: structs.userstats = structs.searchid(UserStats, user.id)
     if stat is not None:
         await ctx.send('```' + user.display_name + ' - напечатано символов: ' + str(stat.counter) + '```')
+
+
+@bot.command()
+async def statsdown(ctx: discord.ext.commands.Context):
+    global UserStats
+    await ctx.message.delete()
+    per: discord.permissions = ctx.message.author.permissions_in(ctx.channel)
+    if not per.manage_channels:
+        return
+    STR: str = ctx.message.content
+    LIST = STR.split(' ')
+    if len(LIST) > 2:
+        print(str(LIST[1]))
+        n: int = int(LIST[1])
+    else:
+        n = 100
+    if len(ctx.message.mentions) == 0:
+        return
+    user: discord.abc.User = ctx.message.mentions[0]
+    global UserStats
+    stat: structs.userstats = structs.searchid(UserStats, user.id)
+    stat.counter -= n
+    LCh: discord.channel = bot.get_channel(settings['home_guild_logs_channel'])
+    await LCh.send('```[Статистика ' + user.name + ' понижена на ' + str(n) + ' символов]```')
 
 
 @bot.command()
@@ -104,31 +141,66 @@ async def serverid(ctx: discord.ext.commands.Context):
 async def off(ctx: discord.ext.commands.Context):
     await ctx.message.delete()
     TFile.WriteSymbolsStat(config.params['SymbolsStatisticsFile'], UserStats)
-    await ctx.send('```[bot offline]```')
-    sys.exit()
+    TCh: discord.channel = bot.get_channel(settings['home_guild_logs_channel'])
+    await TCh.send('```[bot offline]```')
+    await bot.close()
 
 
 # спам линком в чате
 @bot.command()
 async def bomb(ctx: discord.ext.commands.Context):
-    mes = ctx.message
-    await ctx.message.delete()
-    if len(mes.mentions) > 0:
-        link = mes.mentions[0]
-    elif len(mes.role_mentions) > 0:
-        link = mes.role_mentions[0]
-    else:
-        return
-    for i in range(0, 10):
-        await ctx.send(link.mention)
+    per: discord.permissions = ctx.message.author.permissions_in(ctx.channel)
+    if not per.manage_channels:
+        print('vvv')
+    await simplecomm.bomb(ctx)
 
 
 @bot.command()
-async def delmes(ctx: discord.ext.commands.Context):
+async def syschannel(ctx: discord.ext.commands.Context):
     await ctx.message.delete()
-    ch: discord.TextChannel = ctx.channel
-    mes: discord.message = ch.last_message
-    await mes.delete()
+    TCh: discord.TextChannel = ctx.guild.system_channel
+    if TCh is None:
+        await ctx.send('```Системный канал не установлен```')
+    else:
+        await TCh.send('```This is system channel```')
+
+
+@bot.command()
+async def channelid(ctx: discord.ext.commands.Context):
+    await ctx.message.delete()
+    await ctx.send('```Channel id: ' + str(ctx.channel.id) + '```')
+
+
+@bot.command()
+async def updateschannel(ctx: discord.ext.commands.Context):
+    await ctx.message.delete()
+    TCh: discord.TextChannel = ctx.guild.public_updates_channel
+    if TCh is None:
+        await ctx.send('```Канал для публичных обновлений не установлен```')
+    else:
+        await TCh.send('```This is public updates channel```')
+
+
+@bot.command(pass_context = True)
+async def clearmes(ctx):
+    await ctx.message.delete()
+    per: discord.permissions = ctx.message.author.permissions_in(ctx.channel)
+    if not per.manage_channels:
+        return
+    STR: str = ctx.message.content
+    LIST = STR.split(' ')
+    if len(LIST) > 1:
+        n: int = int(LIST[1])
+    else:
+        n = 10
+    n = n if n <= 100 else 100
+    TCH: discord.TextChannel = ctx.channel
+    meslist = []
+    async for message in TCH.history(limit=n, oldest_first=False):
+        meslist.append(message)
+    await TCH.delete_messages(meslist)
+    LCh: discord.channel = bot.get_channel(settings['home_guild_logs_channel'])
+    await LCh.send('```[С канала ' + ctx.channel.name + ' удалено ' + str(n) + ' сообщений]```')
 
 
 # Обращаемся к словарю settings с ключом token, для получения токена
