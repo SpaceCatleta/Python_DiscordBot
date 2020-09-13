@@ -41,6 +41,12 @@ async def on_message(mes: discord.Message):
 
 
 @bot.command()
+async def info(ctx: discord.ext.commands.Context, **kwargs):
+    await ctx.message.delete()
+    await ctx.send('```' + TFile.RadAll(config.params['info']) + '```')
+
+
+@bot.command()
 async def tm(ctx: discord.ext.commands.Context, **kwargs):
     await ctx.message.delete()
     await mycommands.hello(ctx)
@@ -115,6 +121,14 @@ async def bomb(ctx: discord.ext.commands.Context):
         return
     for i in range(0, 10):
         await ctx.send(link.mention)
+
+
+@bot.command()
+async def delmes(ctx: discord.ext.commands.Context):
+    await ctx.message.delete()
+    ch: discord.TextChannel = ctx.channel
+    mes: discord.message = ch.last_message
+    await mes.delete()
 
 
 # Обращаемся к словарю settings с ключом token, для получения токена

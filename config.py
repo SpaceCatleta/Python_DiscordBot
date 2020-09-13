@@ -1,3 +1,4 @@
 params = {
-    'SymbolsStatisticsFile': 'SymbolsStatistics.txt'
+    'SymbolsStatisticsFile': 'SymbolsStatistics.txt',
+    'info': 'info.txt'
 }

@@ -19,3 +19,9 @@ def ReadSymbolsStat(filename):
             print('one read error')
     file.close()
     return srlist
+
+
+def RadAll(filename):
+    file = open(filename, encoding='utf-8')
+    text = file.read()
+    return text
