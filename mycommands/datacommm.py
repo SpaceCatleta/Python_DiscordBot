@@ -17,8 +17,8 @@ async def ChangeSymbStats(bot, ctx: discord.ext.commands.Context, StatsList):
     STR: str = ctx.message.content
     LIST = STR.split(' ')
     if len(LIST) > 2:
-        print(str(LIST[1]))
-        n: int = int(LIST[1])
+        print(str(LIST[2]))
+        n: int = int(LIST[2])
     else:
         n = 100
     if len(ctx.message.mentions) == 0:

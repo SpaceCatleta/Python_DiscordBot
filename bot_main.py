@@ -126,8 +126,8 @@ async def clearmes(ctx: discord.ext.commands.Context):
 
 
 # Урезание статистики указанного пользователя
-@bot.command(name='statsdown')
-async def statsdown(ctx: discord.ext.commands.Context):
+@mod.command(name='-stats')
+async def down_stats(ctx: discord.ext.commands.Context):
     await datacommm.ChangeSymbStats(bot=bot, ctx=ctx, StatsList=UserStats)
 
 

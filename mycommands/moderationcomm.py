@@ -8,8 +8,8 @@ from mycommands import dilogcomm
 async def deletemessages(bot, ctx: discord.ext.commands.Context, stats):
     STR: str = ctx.message.content
     LIST = STR.split(' ')
-    if len(LIST) > 1:
-        n: int = int(LIST[1])
+    if len(LIST) > 2:
+        n: int = int(LIST[2])
     else:
         n = 10
     n = n if n <= 100 else 100
@@ -30,8 +30,8 @@ async def deletemessages(bot, ctx: discord.ext.commands.Context, stats):
                     break
 
     addlog: str = ''
-    if len(LIST) > 2:
-        if LIST[2] == '-exp':
+    if len(LIST) > 3:
+        if LIST[3] == '-exp':
             addlog = await DeleteExp(MesList=meslist, StatsList=stats)
     await TCH.delete_messages(meslist)
     await dilogcomm.printlog(bot, ctx.author, 'С канала ' + ctx.channel.name + ' удалено ' + str(n) + ' сообщений' + addlog)
