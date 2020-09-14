@@ -58,6 +58,9 @@ async def stats(ctx: discord.ext.commands.Context):
 # спам линком в чате
 @bot.command()
 async def bomb(ctx: discord.ext.commands.Context):
+    for role in ctx.author.roles:
+        if role.name == 'шиза':
+            return
     await simplecomm.bomb(ctx)
 
 
