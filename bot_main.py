@@ -41,57 +41,61 @@ async def on_message(mes: discord.Message):
     await bot.process_commands(mes)
 
 
-@bot.command()
-async def info(ctx: discord.ext.commands.Context, **kwargs):
-    await ctx.message.delete()
-    await ctx.send('```' + TFile.RadAll(config.params['info']) + '```')
-
-
+# Тестовое сообщение от бота
 @bot.command()
 async def tm(ctx: discord.ext.commands.Context, **kwargs):
     await ctx.message.delete()
     await simplecomm.hello(ctx)
 
 
-@bot.command()
-async def write(ctx: discord.ext.commands.Context):
-    await ctx.message.delete()
-    TFile.WriteSymbolsStat(config.params['SymbolsStatisticsFile'], UserStats)
-    await ctx.send('```file writed```')
-
-
+# Показывает статистику указанного пользователя
 @bot.command()
 async def stats(ctx: discord.ext.commands.Context):
-    global UserStats
     await ctx.message.delete()
-    user: discord.abc.User = ctx.message.mentions[0] if len(ctx.message.mentions) > 0 else ctx.author
-    stat: structs.userstats = structs.searchid(UserStats, user.id)
-    if stat is not None:
-        await ctx.send('```' + user.display_name + ' - напечатано символов: ' + str(stat.counter) + '```')
+    await ctx.send('```' + await datacommm.userstats(ctx=ctx, StatsList=UserStats) + '```')
 
 
+# спам линком в чате
 @bot.command()
-async def statsdown(ctx: discord.ext.commands.Context):
-    await ctx.message.delete()
-    per: discord.permissions = ctx.message.author.permissions_in(ctx.channel)
-    if not per.manage_channels:
-        return
-    await datacommm.ChangeSymbStats(bot=bot, ctx=ctx, StatsList=UserStats)
+async def bomb(ctx: discord.ext.commands.Context):
+    await simplecomm.bomb(ctx)
 
 
-@bot.command()
-async def ourguild(ctx: discord.ext.commands.Context):
+# ГРУППА
+
+
+# Группа информационных команд
+@bot.group(nane='info')
+async def info(ctx: discord.ext.commands.Context):
     await ctx.message.delete()
-    global guild
-    answer = 'Название сервера: ' + guild.name + '\n'
-    answer += 'Количество участников: ' + str(guild.member_count) + '\nучастники:\n'
-    for user in guild.members:
+
+
+# Выдаёт информацию о коммандах
+@info.command(name='commands')
+async def commands_information(ctx: discord.ext.commands.Context, **kwargs):
+    await ctx.send('```' + TFile.RadAll(config.params['info']) + '```')
+
+
+# Показать id текущего чата
+@info.command(name='channelid')
+async def find_channelid(ctx: discord.ext.commands.Context):
+    await ctx.send('```Channel id: ' + str(ctx.channel.id) + '```')
+
+
+# информация о сервере
+@bot.command(name='guild')
+async def guild_information(ctx: discord.ext.commands.Context):
+    answer = 'Название сервера: ' + ctx.author.guild.name + '\n'
+    answer += 'ID сервера: ' + str(ctx.author.guild.id) + '\n'
+    answer += 'Количество участников: ' + str(ctx.author.guild.member_count) + '\nучастники:\n'
+    for user in ctx.author.guild.members:
         answer += user.name + ' [' + str(user.nick) + ']\n'
     await ctx.send('```' + answer + '```')
 
 
-@bot.command()
-async def clientdata(ctx: discord.ext.commands.Context):
+# Информация дискорда о пользователе
+@bot.command(name='member')
+async def member_information(ctx: discord.ext.commands.Context):
     user: discord.abc.User = ctx.message.mentions[0] if len(ctx.message.mentions) > 0 else ctx.author
     await ctx.message.delete()
     answer = 'Основной ник: ' + user.name + '#' + user.discriminator + '\n'
@@ -102,64 +106,50 @@ async def clientdata(ctx: discord.ext.commands.Context):
     await ctx.send('```' + answer + '```')
 
 
-@bot.command()
-async def serverid(ctx: discord.ext.commands.Context):
+# ГРУППА
+
+
+# Группа команд для модерации
+@bot.group(nane='mod')
+@commands.has_guild_permissions(manage_channels=True)
+async def mod(ctx: discord.ext.commands.Context):
     await ctx.message.delete()
-    await ctx.send('```ID сервера: ' + str(ctx.author.guild.id) + '```')
+
+
+# Удаление сообщений
+@mod.command(name='clearmes')
+async def clearmes(ctx: discord.ext.commands.Context):
+    await moderationcomm.deletemessages(bot, ctx=ctx, stats=UserStats)
+
+
+# Урезание статистики указанного пользователя
+@bot.command(name='statsdown')
+async def statsdown(ctx: discord.ext.commands.Context):
+    await datacommm.ChangeSymbStats(bot=bot, ctx=ctx, StatsList=UserStats)
+
+
+# ГРУППА
+
+
+# Группа систеных комманд
+@bot.group(nane='sys')
+@commands.has_guild_permissions(manage_channels=True)
+async def sys(ctx: discord.ext.commands.Context):
+    await ctx.message.delete()
+
+
+# Запись данных в файл
+@sys.command(name='write')
+async def write_txt(ctx: discord.ext.commands.Context):
+    await systemcomm.writestats(bot=bot, UserStats=UserStats)
 
 
 # команда завершения работы
-@bot.command()
-async def off(ctx: discord.ext.commands.Context):
-    await ctx.message.delete()
-    TFile.WriteSymbolsStat(config.params['SymbolsStatisticsFile'], UserStats)
-    TCh: discord.channel = bot.get_channel(settings['home_guild_logs_channel'])
-    await TCh.send('```[bot offline]```')
+@sys.command(name='off')
+async def sys_shutdown(ctx: discord.ext.commands.Context):
+    await systemcomm.writestats(bot=bot, UserStats=UserStats)
+    await dilogcomm.sprintlog(bot=bot, message='bot offline')
     await bot.close()
-
-
-# спам линком в чате
-@bot.command()
-async def bomb(ctx: discord.ext.commands.Context):
-    per: discord.permissions = ctx.message.author.permissions_in(ctx.channel)
-    if not per.manage_channels:
-        print('vvv')
-    await simplecomm.bomb(ctx)
-
-
-@bot.command()
-async def syschannel(ctx: discord.ext.commands.Context):
-    await ctx.message.delete()
-    TCh: discord.TextChannel = ctx.guild.system_channel
-    if TCh is None:
-        await ctx.send('```Системный канал не установлен```')
-    else:
-        await TCh.send('```This is system channel```')
-
-
-@bot.command()
-async def channelid(ctx: discord.ext.commands.Context):
-    await ctx.message.delete()
-    await ctx.send('```Channel id: ' + str(ctx.channel.id) + '```')
-
-
-@bot.command()
-async def updateschannel(ctx: discord.ext.commands.Context):
-    await ctx.message.delete()
-    TCh: discord.TextChannel = ctx.guild.public_updates_channel
-    if TCh is None:
-        await ctx.send('```Канал для публичных обновлений не установлен```')
-    else:
-        await TCh.send('```This is public updates channel```')
-
-
-@bot.command(pass_context = True)
-async def clearmes(ctx: discord.ext.commands.Context):
-    await ctx.message.delete()
-    per: discord.permissions = ctx.message.author.permissions_in(ctx.channel)
-    if not per.manage_channels:
-        return
-    await moderationcomm.deletemessages(bot, ctx=ctx, stats=UserStats)
 
 
 # Обращаемся к словарю settings с ключом token, для получения токена

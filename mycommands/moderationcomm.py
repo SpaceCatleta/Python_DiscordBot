@@ -13,10 +13,22 @@ async def deletemessages(bot, ctx: discord.ext.commands.Context, stats):
     else:
         n = 10
     n = n if n <= 100 else 100
+
     TCH: discord.TextChannel = ctx.channel
     meslist = []
-    async for message in TCH.history(limit=n, oldest_first=False):
-        meslist.append(message)
+    if len(ctx.message.mentions) == 0:
+        async for message in TCH.history(limit=n, oldest_first=False):
+            meslist.append(message)
+    else:
+        mention: discord.abc.User = ctx.message.mentions[0]
+        counter: int = n
+        async for message in TCH.history(limit=500, oldest_first=False):
+            if message.author.id == mention.id:
+                meslist.append(message)
+                counter -= 1
+                if counter == 0:
+                    break
+
     addlog: str = ''
     if len(LIST) > 2:
         if LIST[2] == '-exp':

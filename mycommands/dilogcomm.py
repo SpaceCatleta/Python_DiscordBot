@@ -3,7 +3,7 @@ from con_config import settings
 
 
 # Пишет сообщение вканал логов
-async def printlog(bot, message: str):
+async def sprintlog(bot, message: str):
     TCh: discord.channel = bot.get_channel(settings['home_guild_logs_channel'])
     await TCh.send('```[' + message + ']```')
 
