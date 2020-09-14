@@ -2,29 +2,16 @@ import discord
 import structs
 import TextFile as TFile
 import config
+import GeneralLib
 from discord.ext import commands
 from con_config import settings
-from mycommands import simplecomm
+from mycommands import simplecomm, dilogcomm, moderationcomm, systemcomm, datacommm
 
 
 # Так как мы указали префикс в settings, обращаемся к словарю с ключом prefix.
 bot = commands.Bot(command_prefix=settings['prefix'])
 guild: discord.Guild
 UserStats = []
-
-
-def mylen(stroke: str):
-    counter: int = 0
-    iscount: bool = True
-    for sym in stroke:
-        if sym == '<':
-            iscount = False
-        elif sym == '>':
-            iscount = True
-            continue
-        if iscount:
-            counter += 1
-    return counter
 
 
 @bot.event
@@ -48,9 +35,9 @@ async def on_message(mes: discord.Message):
     global UserStats
     stat: structs.userstats = structs.searchid(UserStats, mes.author.id)
     if stat is not None:
-        stat.counter += mylen(mes.content)
+        stat.counter += GeneralLib.mylen(mes.content)
     else:
-        UserStats.append(structs.userstats(ID=mes.author.id, Counter=mylen(mes.content)))
+        UserStats.append(structs.userstats(ID=mes.author.id, Counter=GeneralLib.mylen(mes.content)))
     await bot.process_commands(mes)
 
 
@@ -85,26 +72,11 @@ async def stats(ctx: discord.ext.commands.Context):
 
 @bot.command()
 async def statsdown(ctx: discord.ext.commands.Context):
-    global UserStats
     await ctx.message.delete()
     per: discord.permissions = ctx.message.author.permissions_in(ctx.channel)
     if not per.manage_channels:
         return
-    STR: str = ctx.message.content
-    LIST = STR.split(' ')
-    if len(LIST) > 2:
-        print(str(LIST[1]))
-        n: int = int(LIST[1])
-    else:
-        n = 100
-    if len(ctx.message.mentions) == 0:
-        return
-    user: discord.abc.User = ctx.message.mentions[0]
-    global UserStats
-    stat: structs.userstats = structs.searchid(UserStats, user.id)
-    stat.counter -= n
-    LCh: discord.channel = bot.get_channel(settings['home_guild_logs_channel'])
-    await LCh.send('```[Статистика ' + user.name + ' понижена на ' + str(n) + ' символов]```')
+    await datacommm.ChangeSymbStats(bot=bot, ctx=ctx, StatsList=UserStats)
 
 
 @bot.command()
@@ -182,25 +154,12 @@ async def updateschannel(ctx: discord.ext.commands.Context):
 
 
 @bot.command(pass_context = True)
-async def clearmes(ctx):
+async def clearmes(ctx: discord.ext.commands.Context):
     await ctx.message.delete()
     per: discord.permissions = ctx.message.author.permissions_in(ctx.channel)
     if not per.manage_channels:
         return
-    STR: str = ctx.message.content
-    LIST = STR.split(' ')
-    if len(LIST) > 1:
-        n: int = int(LIST[1])
-    else:
-        n = 10
-    n = n if n <= 100 else 100
-    TCH: discord.TextChannel = ctx.channel
-    meslist = []
-    async for message in TCH.history(limit=n, oldest_first=False):
-        meslist.append(message)
-    await TCH.delete_messages(meslist)
-    LCh: discord.channel = bot.get_channel(settings['home_guild_logs_channel'])
-    await LCh.send('```[С канала ' + ctx.channel.name + ' удалено ' + str(n) + ' сообщений]```')
+    await moderationcomm.deletemessages(bot, ctx=ctx, stats=UserStats)
 
 
 # Обращаемся к словарю settings с ключом token, для получения токена
