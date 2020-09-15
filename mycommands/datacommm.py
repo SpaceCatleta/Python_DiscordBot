@@ -1,5 +1,5 @@
 import discord
-import structs
+from generallib import structs
 from mycommands import dilogcomm
 
 

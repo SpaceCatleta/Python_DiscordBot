@@ -1,15 +1,12 @@
 import discord
-import structs
-import TextFile as TFile
-import config
-import GeneralLib
 from discord.ext import commands
-from con_config import settings
+from configs import config, con_config
+from generallib import mainlib, structs, textfile as TFile
 from mycommands import simplecomm, dilogcomm, moderationcomm, systemcomm, datacommm
 
 
 # Так как мы указали префикс в settings, обращаемся к словарю с ключом prefix.
-bot = commands.Bot(command_prefix=settings['prefix'])
+bot = commands.Bot(command_prefix=con_config.settings['prefix'])
 guild: discord.Guild
 UserStats = []
 
@@ -17,14 +14,14 @@ UserStats = []
 @bot.event
 async def on_ready():
     global guild, UserStats
-    guild = bot.get_guild(settings['home_guild_id'])
+    guild = bot.get_guild(con_config.settings['home_guild_id'])
     readlist = TFile.ReadSymbolsStat(config.params['SymbolsStatisticsFile'])
     if len(readlist) == 0:
         for user in guild.members:
             UserStats.append(structs.userstats(user.id, 0))
     else:
         UserStats = readlist
-    TCh: discord.channel = bot.get_channel(settings['home_guild_logs_channel'])
+    TCh: discord.channel = bot.get_channel(con_config.settings['home_guild_logs_channel'])
     await TCh.send('```[bot online]```')
 
 
@@ -35,9 +32,9 @@ async def on_message(mes: discord.Message):
     global UserStats
     stat: structs.userstats = structs.searchid(UserStats, mes.author.id)
     if stat is not None:
-        stat.counter += GeneralLib.mylen(mes.content)
+        stat.counter += mainlib.mylen(mes.content)
     else:
-        UserStats.append(structs.userstats(ID=mes.author.id, Counter=GeneralLib.mylen(mes.content)))
+        UserStats.append(structs.userstats(ID=mes.author.id, Counter=mainlib.mylen(mes.content)))
     await bot.process_commands(mes)
 
 
@@ -157,4 +154,4 @@ async def sys_shutdown(ctx: discord.ext.commands.Context):
 
 # Обращаемся к словарю settings с ключом token, для получения токена
 print('boot bot...')
-bot.run(settings['token'])
+bot.run(con_config.settings['token'])

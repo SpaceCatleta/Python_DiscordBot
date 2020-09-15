@@ -1,5 +1,5 @@
 import discord
-from con_config import settings
+from configs.con_config import settings
 
 
 # Пишет сообщение вканал логов

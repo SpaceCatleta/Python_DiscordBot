@@ -1,6 +1,6 @@
 from mycommands import dilogcomm
-import TextFile as TFile
-import config
+from generallib import textfile as TFile
+from configs import config
 
 
 # Записывает текущие данные в файл

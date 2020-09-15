@@ -1,6 +1,5 @@
 import discord
-import structs
-import GeneralLib
+from generallib import mainlib, structs
 from mycommands import dilogcomm
 
 
@@ -45,7 +44,7 @@ async def DeleteExp(MesList, StatsList):
     for mes in MesList:
         if mes.author.bot:
             continue
-        counter = GeneralLib.mylen(mes.content)
+        counter = mainlib.mylen(mes.content)
         ID = mes.author.id
         user = structs.searchid(authorsdata, ID)
         if user is None:

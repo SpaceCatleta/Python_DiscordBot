@@ -1,4 +1,4 @@
-import structs
+from generallib import structs
 
 
 def WriteSymbolsStat(filename, statslist):
