@@ -1,8 +1,10 @@
 import discord
+import time
 from discord.ext import commands
+from usersettings import params
 from configs import config, con_config
 from generallib import mainlib, structs, textfile as TFile
-from mycommands import simplecomm, dilogcomm, moderationcomm, systemcomm, datacommm
+from mycommands import simplecomm, dilogcomm, moderationcomm, systemcomm, datacommm, settingscomm
 
 
 # Так как мы указали префикс в settings, обращаемся к словарю с ключом prefix.
@@ -16,6 +18,7 @@ async def on_ready():
     global guild, UserStats
     guild = bot.get_guild(con_config.settings['home_guild_id'])
     readlist = TFile.ReadSymbolsStat(config.params['SymbolsStatisticsFile'])
+    await params.init_dictinoraies()
     if len(readlist) == 0:
         for user in guild.members:
             UserStats.append(structs.userstats(user.id, 0))
@@ -45,6 +48,13 @@ async def tm(ctx: discord.ext.commands.Context, **kwargs):
     await simplecomm.hello(ctx)
 
 
+# Тестовоая команда
+@bot.command()
+async def test(ctx: discord.ext.commands.Context, **kwargs):
+    await ctx.message.delete()
+    await ctx.send('```{0}```'.format(params.accessparams['banfunc']))
+
+
 # Показывает статистику указанного пользователя
 @bot.command()
 async def stats(ctx: discord.ext.commands.Context):
@@ -56,8 +66,9 @@ async def stats(ctx: discord.ext.commands.Context):
 @bot.command()
 async def bomb(ctx: discord.ext.commands.Context):
     for role in ctx.author.roles:
-        if role.name == 'шиза':
+        if role.name == params.accessparams['banfunc']:
             return
+    await ctx.message.delete()
     await simplecomm.bomb(ctx)
 
 
@@ -116,6 +127,24 @@ async def mod(ctx: discord.ext.commands.Context):
     await ctx.message.delete()
 
 
+# Утсанавливает роль для мута
+@mod.command(name='moot')
+async def give_moot(ctx: discord.ext.commands.Context):
+    await moderationcomm.give_timer_role(bot=bot,ctx=ctx,RoleList=guild.roles,rolename=params.accessparams['moot'])
+
+
+# Утсанавливает роль для войс мута
+@mod.command(name='voicemoot')
+async def give_voicemoot(ctx: discord.ext.commands.Context):
+    await moderationcomm.give_timer_role(bot=bot, ctx=ctx, RoleList=guild.roles, rolename=params.accessparams['voicemoot'])
+
+
+# Утсанавливает роль с ограниченныи функциями
+@mod.command(name='banfunc')
+async def give_banfunc(ctx: discord.ext.commands.Context):
+    await moderationcomm.give_timer_role(bot=bot, ctx=ctx, RoleList=guild.roles, rolename=params.accessparams['banfunc'])
+
+
 # Удаление сообщений
 @mod.command(name='clearmes')
 async def clearmes(ctx: discord.ext.commands.Context):
@@ -126,6 +155,34 @@ async def clearmes(ctx: discord.ext.commands.Context):
 @mod.command(name='-stats')
 async def down_stats(ctx: discord.ext.commands.Context):
     await datacommm.ChangeSymbStats(bot=bot, ctx=ctx, StatsList=UserStats)
+
+
+# ГРУППА
+
+
+# Группа коанд для настроек
+@bot.group(nane='set')
+@commands.has_guild_permissions(manage_channels=True)
+async def set(ctx: discord.ext.commands.Context):
+    await ctx.message.delete()
+
+
+# Утсанавливает роль с ограниченныи функциями
+@set.command(name='banfunc')
+async def set_banfunc_role(ctx: discord.ext.commands.Context):
+    await settingscomm.set_Access_role(bot=bot, accessname='banfunc', ctx=ctx)
+
+
+# Утсанавливает роль с ограниченныи функциями
+@set.command(name='moot')
+async def set_moot_role(ctx: discord.ext.commands.Context):
+    await settingscomm.set_Access_role(bot=bot, accessname='moot', ctx=ctx)
+
+
+# Утсанавливает роль с ограниченныи функциями
+@set.command(name='voicemoot')
+async def set_voicemoot_role(ctx: discord.ext.commands.Context):
+    await settingscomm.set_Access_role(bot=bot, accessname='voicemoot', ctx=ctx)
 
 
 # ГРУППА
