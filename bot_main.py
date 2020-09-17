@@ -33,6 +33,22 @@ async def on_message(mes: discord.Message):
     datacommm.stats_update(mes, UserStats)
     await bot.process_commands(mes)
 
+@bot.event
+async def on_voice_state_update(member: discord.Member, before: discord.VoiceState, after: discord.VoiceState):
+    if before.channel is None:
+        user = structs.searchid(list=UserStats, ID=member.id)
+        user.connect_time = time.time()
+    if after.channel is None:
+        user = structs.searchid(list=UserStats, ID=member.id)
+        user.name = member.name
+        chat_time = time.time() - user.connect_time
+        if chat_time > 10000000:
+            await dilogcomm.sprintlog(bot=bot, message='{0} - ошибка вычисления в гс чате [{1}]'.format(user.name,
+                                                                                                        chat_time))
+        else:
+            user.vc_counter += chat_time
+            await dilogcomm.sprintlog(bot=bot, message='{0} пробыл в гс {1}сек.'.format(user.name, chat_time))
+
 
 # Тестовое сообщение от бота
 @bot.command()

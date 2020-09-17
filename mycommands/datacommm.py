@@ -1,4 +1,5 @@
 import discord
+import time
 from generallib import mainlib, structs
 from mycommands import dilogcomm
 
@@ -8,10 +9,9 @@ def userstats(ctx: discord.ext.commands.Context, StatsList):
     user: discord.abc.User = ctx.message.mentions[0] if len(ctx.message.mentions) > 0 else ctx.author
     stat: structs.userstats = structs.searchid(StatsList, user.id)
     if stat is not None:
-        answerstr = '{0}:\nОпыт: {1}\nОтправлено сообщений: {2}\nНапечатано символов: {3}'.format(user.display_name,
-                                                                                            str(stat.exp),
-                                                                                            str(stat.mes_counter),
-                                                                                            str(stat.symb_counter))
+        answerstr = '''{0}:\nОпыт: {1}\nОтправлено сообщений: {2}\nНапечатано символов: {3}\nВремя в голосовых чатах:
+        {4}'''.format(user.display_name, str(stat.exp), str(stat.mes_counter), str(stat.symb_counter),
+                      time.strftime("%H:%M:%S", time.gmtime(stat.vc_counter)).replace(' ', ''))
         return answerstr
     else:
         return str(user.display_name + ' - Данные не найдены')

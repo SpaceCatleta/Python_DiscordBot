@@ -5,7 +5,7 @@ from generallib import structs, mainlib
 def WriteSymbolsStat(filename, statslist):
     file = open(filename, 'w')
     for user in statslist:
-        file.write('{0} {1}:{2}:{3}:{4}:{5}\n'.format(str(user.id),
+        file.write('{0} {1}|{2}|{3}|{4}|{5}\n'.format(str(user.id),
                                                       str(user.exp),
                                                       str(user.lvl),
                                                       str(user.mes_counter),
@@ -20,8 +20,8 @@ def ReadSymbolsStat(filename):
     srlist = []
     for line in file:
         stroke = str(line).split(" ")
-        statstr = stroke[1].split(':')
-        statuser = structs.userstats(ID=int(stroke[0]), Exp=float(statstr[0]), Lvl=int(statstr[1]), MesCounter=int(statstr[2]), SymbCounter=int(statstr[3]), VCCounter=int(statstr[4]))
+        statstr = stroke[1].split('|')
+        statuser = structs.userstats(ID=int(stroke[0]), Exp=float(statstr[0]), Lvl=int(statstr[1]), MesCounter=int(statstr[2]), SymbCounter=int(statstr[3]), VCCounter=float(statstr[4]))
         srlist.append(statuser)
 
     file.close()
