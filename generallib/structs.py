@@ -1,3 +1,4 @@
+# Поиск по id
 def searchid(list, ID: int):
     for stat in list:
         if stat.id == ID:
@@ -7,21 +8,27 @@ def searchid(list, ID: int):
 
 # Описывает статистику одного пользователя
 class userstats(object):
+    # Уникальный id пользователя
     id: int
-    counter: int
-
-    def __init__(self, ID: int, Counter: int):
-        self.id = ID
-        self.counter = Counter
-
-
-# Описывает данные одного пользователя
-class userdata(object):
+    # кол-во опыта
+    exp: float
+    # уровень
+    lvl: int
+    # кол-во отправленных сообщений
+    mes_counter: int
+    # Кол-во напечатанных символов
+    symb_counter: int
+    # время пребывания в голосовых каналах
+    vc_counter: int
+    # Имя пользователя (в харнении статистики не используется)
     name: str
-    id: int
-    counter: int
 
-    def __init__(self, Name: str, ID: int, Counter: int):
+    # Конструктор
+    def __init__(self, ID: int, SymbCounter: int = 0, MesCounter: int = 0,
+                 VCCounter: int = 0, Exp: float = 0.0, Lvl: int = 0):
         self.id = ID
-        self.counter = Counter
-        self.name = Name
+        self.exp = Exp
+        self.lvl = Lvl
+        self.mes_counter = MesCounter
+        self.symb_counter = SymbCounter
+        self.vc_counter = VCCounter

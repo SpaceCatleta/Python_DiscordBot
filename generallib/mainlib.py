@@ -49,4 +49,3 @@ def Findrole(rolelist: list, serchrole: str):
     for curr_role in rolelist:
         if curr_role.name == serchrole:
             return curr_role
-

@@ -30,36 +30,39 @@ async def on_ready():
 
 @bot.event
 async def on_message(mes: discord.Message):
-    if mes.author.bot:
-        return
-    global UserStats
-    stat: structs.userstats = structs.searchid(UserStats, mes.author.id)
-    if stat is not None:
-        stat.counter += mainlib.mylen(mes.content)
-    else:
-        UserStats.append(structs.userstats(ID=mes.author.id, Counter=mainlib.mylen(mes.content)))
+    datacommm.stats_update(mes, UserStats)
     await bot.process_commands(mes)
 
 
 # Тестовое сообщение от бота
 @bot.command()
-async def tm(ctx: discord.ext.commands.Context, **kwargs):
+async def tm(ctx: discord.ext.commands.Context):
     await ctx.message.delete()
     await simplecomm.hello(ctx)
 
 
+@bot.command()
+async def mestext(ctx: discord.ext.commands.Context):
+    await ctx.message.delete()
+    async for m in ctx.channel.history(limit=1):
+        await ctx.send(str(m.content))
+
+
 # Тестовоая команда
 @bot.command()
-async def test(ctx: discord.ext.commands.Context, **kwargs):
+async def test(ctx: discord.ext.commands.Context):
     await ctx.message.delete()
-    await ctx.send('```{0}```'.format(params.accessparams['banfunc']))
+    i = 0
+    async for m in ctx.channel.history(limit=10000):
+        i += 1
+    await ctx.send('```в данном канале {0} сообщений```'.format(str(i)))
 
 
 # Показывает статистику указанного пользователя
 @bot.command()
 async def stats(ctx: discord.ext.commands.Context):
     await ctx.message.delete()
-    await ctx.send('```' + await datacommm.userstats(ctx=ctx, StatsList=UserStats) + '```')
+    await ctx.send('```{0}```'.format(datacommm.userstats(ctx=ctx, StatsList=UserStats)))
 
 
 # спам линком в чате
@@ -149,12 +152,6 @@ async def give_banfunc(ctx: discord.ext.commands.Context):
 @mod.command(name='clearmes')
 async def clearmes(ctx: discord.ext.commands.Context):
     await moderationcomm.deletemessages(bot, ctx=ctx, stats=UserStats)
-
-
-# Урезание статистики указанного пользователя
-@mod.command(name='-stats')
-async def down_stats(ctx: discord.ext.commands.Context):
-    await datacommm.ChangeSymbStats(bot=bot, ctx=ctx, StatsList=UserStats)
 
 
 # ГРУППА

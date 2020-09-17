@@ -44,21 +44,32 @@ async def DeleteExp(MesList, StatsList):
     deflog: str = ""
     authorsdata = []
 
+    # Вычесление удаляемого опыта
     for mes in MesList:
         if mes.author.bot:
             continue
-        counter = mainlib.mylen(mes.content)
-        ID = mes.author.id
-        user = structs.searchid(authorsdata, ID)
+        user = structs.searchid(authorsdata, mes.author.id)
+        # Если пользователь попадается впервые, создаётся новый объект
         if user is None:
-            user = structs.userdata(Name=mes.author.name, ID=mes.author.id, Counter=0)
+            user = structs.userstats(ID=mes.author.id)
+            user.name = mes.author.name
             authorsdata.append(user)
-        user.counter += counter
+        # Вычисление и запись поинжаемых статистик
+        symb_counter = mainlib.mylen(mes.content)
+        user.symb_counter += symb_counter
+        user.exp += symb_counter / 10
+        user.mes_counter += 1
 
+    # Понижение статистик и логирование
     for author in authorsdata:
         userstat: structs.userstats = structs.searchid(StatsList, author.id)
-        userstat.counter -= author.counter
-        deflog += '\n  > ' + author.name + ' статистика символов понижена на ' + str(author.counter)
+        userstat.exp -= author.exp
+        userstat.symb_counter -= author.symb_counter
+        userstat.mes_counter -= author.mes_counter
+        deflog += '\n > {0} > удалено: {1} сообщений, {2} символов, {3} опыта'.format(author.name,
+                                                                                    author.mes_counter,
+                                                                                    author.symb_counter,
+                                                                                    author.exp)
     return deflog
 
 

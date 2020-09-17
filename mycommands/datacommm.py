@@ -1,29 +1,35 @@
 import discord
-from generallib import structs
+from generallib import mainlib, structs
 from mycommands import dilogcomm
 
 
 # Возващает статистику пользователя
-async def userstats(ctx: discord.ext.commands.Context, StatsList):
+def userstats(ctx: discord.ext.commands.Context, StatsList):
     user: discord.abc.User = ctx.message.mentions[0] if len(ctx.message.mentions) > 0 else ctx.author
     stat: structs.userstats = structs.searchid(StatsList, user.id)
     if stat is not None:
-        return str(user.display_name + ' - напечатано символов: ' + str(stat.counter))
+        answerstr = '{0}:\nОпыт: {1}\nОтправлено сообщений: {2}\nНапечатано символов: {3}'.format(user.display_name,
+                                                                                            str(stat.exp),
+                                                                                            str(stat.mes_counter),
+                                                                                            str(stat.symb_counter))
+        return answerstr
     else:
         return str(user.display_name + ' - Данные не найдены')
 
 
-async def ChangeSymbStats(bot, ctx: discord.ext.commands.Context, StatsList):
-    STR: str = ctx.message.content
-    LIST = STR.split(' ')
-    if len(LIST) > 2:
-        print(str(LIST[2]))
-        n: int = int(LIST[2])
-    else:
-        n = 100
-    if len(ctx.message.mentions) == 0:
+def stats_update(mes: discord.Message, StatsList):
+    if mes.author.bot:
         return
-    user: discord.abc.User = ctx.message.mentions[0]
-    stat: structs.userstats = structs.searchid(StatsList, user.id)
-    stat.counter -= n
-    await dilogcomm.printlog(bot, ctx.author, 'Статистика ' + user.name + ' понижена на ' + str(n) + ' символов')
+    stat: structs.userstats = structs.searchid(StatsList, mes.author.id)
+    if stat is not None:
+        symbprint = mainlib.mylen(mes.content)
+        stat.symb_counter += symbprint
+        stat.mes_counter += 1
+        stat.exp += symbprint/10
+    else:
+        newstat = structs.userstats(ID=mes.author.id, )
+        symbprint = mainlib.mylen(mes.content)
+        newstat.symb_counter += symbprint
+        newstat.mes_counter += 1
+        newstat.exp += symbprint / 10
+        UserStats.append(newstat)
