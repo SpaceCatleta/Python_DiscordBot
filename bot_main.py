@@ -48,17 +48,16 @@ async def tm(ctx: discord.ext.commands.Context):
 @bot.command()
 async def test(ctx: discord.ext.commands.Context):
     await ctx.message.delete()
-    i = 0
-    async for m in ctx.channel.history(limit=10000):
-        i += 1
-    await ctx.send('```в данном канале {0} сообщений```'.format(str(i)))
 
 
 # Показывает статистику указанного пользователя
 @bot.command()
 async def stats(ctx: discord.ext.commands.Context):
     await ctx.message.delete()
-    await ctx.send('```{0}```'.format(datacommm.userstats(ctx=ctx, StatsList=UserStats)))
+    emb_list = datacommm.user_stats_emb(ctx=ctx, StatsList=UserStats)
+    emb = discord.Embed(color=discord.colour.Color.dark_magenta(),
+                        title=emb_list[0], description=emb_list[1])
+    await ctx.send(embed=emb)
 
 
 # спам линком в чате

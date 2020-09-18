@@ -5,7 +5,7 @@ from mycommands import dilogcomm
 
 
 # Возващает статистику пользователя
-def userstats(ctx: discord.ext.commands.Context, StatsList):
+def user_stats(ctx: discord.ext.commands.Context, StatsList):
     user: discord.abc.User = ctx.message.mentions[0] if len(ctx.message.mentions) > 0 else ctx.author
     stat: structs.userstats = structs.searchid(StatsList, user.id)
     if stat is not None:
@@ -14,6 +14,23 @@ def userstats(ctx: discord.ext.commands.Context, StatsList):
  {4}'''.format(user.display_name, mainlib.print_number(stat.exp, 1), stat.mes_counter, stat.symb_counter,
                time.strftime("%H:%M:%S", time.gmtime(stat.vc_counter)).replace(' ', ''))
         return answerstr
+    else:
+        return str(user.display_name + ' - Данные не найдены')
+
+
+# Возващает статистику пользователя для Embed
+def user_stats_emb(ctx: discord.ext.commands.Context, StatsList):
+
+    user: discord.abc.User = ctx.message.mentions[0] if len(ctx.message.mentions) > 0 else ctx.author
+    stat: structs.userstats = structs.searchid(StatsList, user.id)
+    answer = ['Статистика {0}:'.format(user.display_name)]
+    if stat is not None:
+        stat.exp = round(stat.exp, 1)
+        answer_str = 'Опыт: {0}\nОтправлено сообщений: {1}\nНапечатано символов: {2}\nВремя в голосовых чатах:\
+ {3}'.format(mainlib.print_number(stat.exp, 1), stat.mes_counter, stat.symb_counter,
+             time.strftime("%H:%M:%S", time.gmtime(stat.vc_counter)).replace(' ', ''))
+        answer.append(answer_str)
+        return answer
     else:
         return str(user.display_name + ' - Данные не найдены')
 
