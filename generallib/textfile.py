@@ -5,12 +5,9 @@ from generallib import structs, mainlib
 def WriteSymbolsStat(filename, statslist):
     file = open(filename, 'w')
     for user in statslist:
-        file.write('{0} {1}|{2}|{3}|{4}|{5}\n'.format(str(user.id),
-                                                      str(user.exp),
-                                                      str(user.lvl),
-                                                      str(user.mes_counter),
-                                                      str(user.symb_counter),
-                                                      str(user.vc_counter)))
+        file.write('{0} {1}|{2}|{3}|{4}|{5}\n'.
+                   format(str(user.id), str(user.exp), str(user.lvl),
+                          str(user.mes_counter), str(user.symb_counter), str(user.vc_counter)))
     file.close()
 
 

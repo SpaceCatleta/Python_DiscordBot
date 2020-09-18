@@ -9,14 +9,15 @@ def userstats(ctx: discord.ext.commands.Context, StatsList):
     user: discord.abc.User = ctx.message.mentions[0] if len(ctx.message.mentions) > 0 else ctx.author
     stat: structs.userstats = structs.searchid(StatsList, user.id)
     if stat is not None:
-        answerstr = '''{0}:\nОпыт: {1}\nОтправлено сообщений: {2}\nНапечатано символов: {3}\nВремя в голосовых чатах:
-        {4}'''.format(user.display_name, str(stat.exp), str(stat.mes_counter), str(stat.symb_counter),
-                      time.strftime("%H:%M:%S", time.gmtime(stat.vc_counter)).replace(' ', ''))
+        answerstr = '''{0}:\nОпыт: {1}\nОтправлено сообщений: {2}\nНапечатано символов: {3}\nВремя в голосовых чатах:\
+ {4}'''.format(user.display_name, str(stat.exp), str(stat.mes_counter), str(stat.symb_counter),
+               time.strftime("%H:%M:%S", time.gmtime(stat.vc_counter)).replace(' ', ''))
         return answerstr
     else:
         return str(user.display_name + ' - Данные не найдены')
 
 
+# Обновляет статистику пользователя по отправленному им сообщщению
 def stats_update(mes: discord.Message, StatsList):
     if mes.author.bot:
         return
@@ -32,4 +33,21 @@ def stats_update(mes: discord.Message, StatsList):
         newstat.symb_counter += symbprint
         newstat.mes_counter += 1
         newstat.exp += symbprint / 10
-        UserStats.append(newstat)
+        StatsList.append(newstat)
+
+
+async def voice_stats_update(bot, Stats_List, member: discord.Member,
+                             before: discord.VoiceState, after: discord.VoiceState):
+    if before.channel is None:
+        user = structs.searchid(list=Stats_List, ID=member.id)
+        user.connect_time = time.time()
+    if after.channel is None:
+        user = structs.searchid(list=Stats_List, ID=member.id)
+        user.name = member.name
+        chat_time = time.time() - user.connect_time
+        if chat_time > 10000000:
+            await dilogcomm.printlog(bot=bot, message='{0} - ошибка вычисления в гс чате [{1}]'.
+                                     format(user.name, chat_time))
+        else:
+            user.vc_counter += chat_time
+            await dilogcomm.printlog(bot=bot, message='{0} пробыл в гс {1}сек.'.format(user.name, chat_time))

@@ -6,4 +6,4 @@ from configs import config
 # Записывает текущие данные в файл
 async def writestats(bot, UserStats):
     TFile.WriteSymbolsStat(config.params['SymbolsStatisticsFile'], UserStats)
-    await dilogcomm.sprintlog(bot=bot, message='Статистика записана в файл')
+    await dilogcomm.printlog(bot=bot, message='Статистика записана в файл')

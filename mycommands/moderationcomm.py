@@ -36,7 +36,8 @@ async def deletemessages(bot, ctx: discord.ext.commands.Context, stats):
         if LIST[3] == '-exp':
             addlog = await DeleteExp(MesList=meslist, StatsList=stats)
     await TCH.delete_messages(meslist)
-    await dilogcomm.printlog(bot, ctx.author, 'С канала ' + ctx.channel.name + ' удалено ' + str(n) + ' сообщений' + addlog)
+    await dilogcomm.printlog(bot=bot, author=ctx.author, message='С канала "{0}"\
+ удалено {1} сообщений {2}'.format(ctx.channel.name, str(n), addlog))
 
 
 # Обнуляет символы в статистике, полученные за указанные сообщения
@@ -66,10 +67,8 @@ async def DeleteExp(MesList, StatsList):
         userstat.exp -= author.exp
         userstat.symb_counter -= author.symb_counter
         userstat.mes_counter -= author.mes_counter
-        deflog += '\n > {0} > удалено: {1} сообщений, {2} символов, {3} опыта'.format(author.name,
-                                                                                    author.mes_counter,
-                                                                                    author.symb_counter,
-                                                                                    author.exp)
+        deflog += '\n > {0} > удалено: {1} сообщений, {2} символов,\
+ {3} опыта'.format(author.name, author.mes_counter, author.symb_counter,  author.exp)
     return deflog
 
 
