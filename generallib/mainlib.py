@@ -3,7 +3,7 @@ import discord
 
 # Получает название роли из контекста
 # Роль должна быть задана либо линком, либо именем в 3 аргументе
-def get_rolename(ctx: discord.ext.commands.Context):
+def get_rolename(ctx):
     if len(ctx.message.role_mentions) > 0:
         return ctx.message.role_mentions[0].name
     else:
@@ -26,6 +26,13 @@ def mylen(stroke: str):
         if iscount:
             counter += 1
     return counter
+
+
+# Выводит на печать дробное число
+def print_number(number: float, number_count):
+    main_part = int(number)
+    float_part = int(round((number - main_part) * pow(10, number_count), 1))
+    return '{0}.{1}'.format(main_part, float_part)
 
 
 # Конвертирует словарь в двумерный список
