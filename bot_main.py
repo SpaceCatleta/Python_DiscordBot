@@ -3,11 +3,12 @@ from discord.ext import commands
 from usersettings import params
 from configs import config, con_config
 from generallib import structs, textfile
-from mycommands import simplecomm, dilogcomm, moderationcomm, systemcomm, datacommm, settingscomm, infocomm
+from mycommands import simplecomm, dilogcomm, moderationcomm, systemcomm, datacommm, settingscomm, infocomm, dsVote
 
 
 # Так как мы указали префикс в settings, обращаемся к словарю с ключом prefix.
 bot = commands.Bot(command_prefix=con_config.settings['prefix'])
+current_vote: dsVote.Vote = None
 guild: discord.Guild
 UserStats = []
 
@@ -37,6 +38,13 @@ async def on_voice_state_update(member: discord.Member, before: discord.VoiceSta
     await datacommm.voice_stats_update(bot=bot, Stats_List=UserStats, member=member, before=before, after=after)
 
 
+@bot.event
+async def on_reaction_add(react: discord.Reaction, user):
+    if current_vote is None:
+        return
+    current_vote.add_vote(emoji=react, user=user)
+
+
 # Тестовое сообщение от бота
 @bot.command()
 async def tm(ctx: discord.ext.commands.Context):
@@ -44,10 +52,37 @@ async def tm(ctx: discord.ext.commands.Context):
     await simplecomm.hello(ctx)
 
 
+# Начинает голосование
+@bot.command(name='vote')
+async def boot_vote(ctx: discord.ext.commands.Context):
+    await ctx.message.delete()
+    global current_vote
+    if current_vote is not None:
+        await ctx.send('```Одно голосование уже ведётся, дождитесь его завершения, чтобы начать новое```')
+        return
+    current_vote = dsVote.create_vote(bot=bot, ctx=ctx)
+    await current_vote.show()
+    del current_vote
+    current_vote = None
+
+
 # Тестовоая команда
 @bot.command()
 async def test(ctx: discord.ext.commands.Context):
     await ctx.message.delete()
+
+    # await ctx.message.delete()
+
+
+@bot.command(name='print')
+async def printer(ctx: discord.ext.commands.Context):
+    await ctx.message.delete()
+    print(str(ctx.message.content))
+
+
+@bot.command(name='react')
+async def reaction(ctx: discord.ext.commands.Context):
+    await ctx.message.add_reaction(emoji="🔟")
 
 
 # Показывает статистику указанного пользователя
@@ -179,18 +214,18 @@ async def sys(ctx: discord.ext.commands.Context):
 
 # Запись данных в файл
 @sys.command(name='write')
-async def write_txt(ctx: discord.ext.commands.Context):
+async def write_txt():
     await systemcomm.writestats(bot=bot, UserStats=UserStats)
 
 
 # команда завершения работы
 @sys.command(name='off')
-async def sys_shutdown(ctx: discord.ext.commands.Context):
+async def sys_shutdown():
     await systemcomm.writestats(bot=bot, UserStats=UserStats)
     await dilogcomm.printlog(bot=bot, message='bot offline')
     await bot.close()
 
 
 # Обращаемся к словарю settings с ключом token, для получения токена
-print('boot bot...')
+print('boot')
 bot.run(con_config.settings['token'])

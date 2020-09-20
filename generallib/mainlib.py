@@ -56,3 +56,11 @@ def Findrole(rolelist: list, serchrole: str):
     for curr_role in rolelist:
         if curr_role.name == serchrole:
             return curr_role
+
+
+# Ищет значение в списке
+def is_match(el_list: list, value):
+    for element in el_list:
+        if value == element:
+            return True
+    return False
