@@ -44,10 +44,10 @@ def DictToList(userdict: dict):
 
 
 # Выводит словарь на печать
-def PrintDict(userdict: dict):
+def PrintDict(userdict: dict, delsymb: str = ':'):
     text = ''
     for key in userdict:
-        text += '{0}:{1}\n'.format(str(key), str(userdict[key]))
+        text += '{0}{1}{2}\n'.format(str(key), delsymb, str(userdict[key]))
     return text
 
 

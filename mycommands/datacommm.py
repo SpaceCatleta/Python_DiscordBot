@@ -5,7 +5,7 @@ from mycommands import dilogcomm
 
 
 # Возващает статистику пользователя
-def user_stats(ctx: discord.ext.commands.Context, StatsList):
+def user_stats(ctx, StatsList):
     user: discord.abc.User = ctx.message.mentions[0] if len(ctx.message.mentions) > 0 else ctx.author
     stat: structs.userstats = structs.searchid(StatsList, user.id)
     if stat is not None:
@@ -19,7 +19,7 @@ def user_stats(ctx: discord.ext.commands.Context, StatsList):
 
 
 # Возващает статистику пользователя для Embed
-def user_stats_emb(ctx: discord.ext.commands.Context, StatsList):
+def user_stats_emb(ctx, StatsList):
 
     user: discord.abc.User = ctx.message.mentions[0] if len(ctx.message.mentions) > 0 else ctx.author
     stat: structs.userstats = structs.searchid(StatsList, user.id)
@@ -35,10 +35,33 @@ def user_stats_emb(ctx: discord.ext.commands.Context, StatsList):
         return str(user.display_name + ' - Данные не найдены')
 
 
+# Расчитывает статистику на всех текстовых каналах с указанного времени
+async def calc_alltxtchannels_stats_after_time(guild: discord.Guild, time, MainStatList: list):
+    StatList = []
+    for channel in guild.channels:
+        if issubclass(type(channel), discord.TextChannel):
+            StatList = merge_stats(StatList, await calc_stats_after_time(channel=channel, time=time))
+    deflog = 'Был произведён поиск сообщений после последней записи статистики'
+    for user in StatList:
+        deflog += '\n > {0} > обнаружено: {1} сообщений, {2} символов;\
+ начислено {3} опыта'.format(user.name, user.mes_counter, user.symb_counter,  mainlib.print_number(user.exp, 1))
+    MainStatList = merge_stats(MainStatList, StatList)
+    return deflog
+
+
+# Расчитывает статистику на текстовом канале с указанного времени
+async def calc_stats_after_time(channel: discord.TextChannel, time):
+    StatList = []
+    async for message in channel.history(limit=10000, oldest_first=False, after=time):
+        stats_update(message, StatList)
+    return StatList
+
+
 # Обновляет статистику пользователя по отправленному им сообщщению
 def stats_update(mes: discord.Message, StatsList):
     if mes.author.bot:
         return
+
     stat: structs.userstats = structs.searchid(StatsList, mes.author.id)
     if stat is not None:
         symbprint = mainlib.mylen(mes.content)
@@ -46,11 +69,12 @@ def stats_update(mes: discord.Message, StatsList):
         stat.mes_counter += 1
         stat.exp += symbprint/10
     else:
-        newstat = structs.userstats(ID=mes.author.id, )
+        newstat = structs.userstats(ID=mes.author.id)
         symbprint = mainlib.mylen(mes.content)
         newstat.symb_counter += symbprint
         newstat.mes_counter += 1
         newstat.exp += symbprint / 10
+        newstat.name = mes.author.name + str(mes.author.discriminator)
         StatsList.append(newstat)
 
 
@@ -69,3 +93,32 @@ async def voice_stats_update(bot, Stats_List, member: discord.Member,
         else:
             user.vc_counter += chat_time
             await dilogcomm.printlog(bot=bot, message='{0} пробыл в гс {1}сек.'.format(user.name, chat_time))
+
+
+async def calculate_txtchannel_stats(channel):
+    newstat = []
+    async for mes in channel.history(limit=10000, oldest_first=None):
+        stats_update(mes, newstat)
+    return newstat
+
+
+def merge_stats(stats1, stats2):
+    for stat in stats2:
+        stat1 = structs.searchid(stats1, stat.id)
+        if stat1 is not None:
+            stat1.add(stat)
+        else:
+            stats1.append(stat)
+    return stats1
+
+
+def replace_stats(stats_main, stats_addend):
+    len = len(stats_main)
+    i = 0
+    while i < len:
+        stat2 = structs.searchid(stats_addend, stats_main[i].id)
+        if stat2 is not None:
+            stats_main[i] = stat2
+        else:
+            stats_main[i].clear()
+        i += 1

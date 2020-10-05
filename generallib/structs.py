@@ -27,10 +27,26 @@ class userstats(object):
 
     # Конструктор
     def __init__(self, ID: int, SymbCounter: int = 0, MesCounter: int = 0,
-                 VCCounter: int = 0, Exp: float = 0.0, Lvl: int = 0):
+                 VCCounter: int = 0, Exp: float = 0.0, Lvl: int = 0, Name: str = 'NoName'):
         self.id = ID
         self.exp = Exp
         self.lvl = Lvl
         self.mes_counter = MesCounter
         self.symb_counter = SymbCounter
         self.vc_counter = VCCounter
+        self.name = Name
+
+    def add(self, addend):
+        self.exp += addend.exp
+        self.lvl += addend.lvl
+        self.mes_counter += addend.mes_counter
+        self.symb_counter += addend.symb_counter
+        self.vc_counter += addend.vc_counter
+
+    def clear(self, vc_clear: bool = False):
+        self.exp = 0
+        self.lvl = 0
+        self.mes_counter = 0
+        self.symb_counter = 0
+        if vc_clear:
+            self.vc_counter = 0
