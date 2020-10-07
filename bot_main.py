@@ -1,10 +1,11 @@
 import discord
 from dateutil.tz import tzoffset
-from datetime import datetime, timedelta
+from datetime import datetime
 from discord.ext import commands
 from usersettings import params
 from configs import config, con_config
-from generallib import structs, textfile, mainlib
+from generallib import textfile, mainlib
+from structs import userstats
 from mycommands import simplecomm, dilogcomm, moderationcomm, systemcomm, datacommm, settingscomm, infocomm, dsVote
 
 
@@ -31,7 +32,7 @@ async def on_ready():
                                                                                           MainStatList=UserStats))
     if len(readlist) == 0:
         for user in guild.members:
-            UserStats.append(structs.userstats(user.id, 0))
+            UserStats.append(userstats.userstats(user.id, 0))
     else:
         UserStats = readlist
     await dilogcomm.printlog(bot=bot, message='bot online')
@@ -45,7 +46,7 @@ async def on_message(mes: discord.Message):
 
 @bot.event
 async def on_member_join(member):
-    UserStats.append(structs.userstats(ID=member.id))
+    UserStats.append(userstats.userstats(ID=member.id))
     await member.add_roles(mainlib.Findrole(rolelist=guild.roles, serchrole='неопознанная сущность'))
 
 
@@ -77,7 +78,7 @@ async def add_calc(ctx: discord.ext.commands.Context):
     counter: int = 0
     async for message in ctx.channel.history(limit=100, after=time):
         counter += 1
-    await ctx.send(counter)
+    await ctx.send(str(counter))
 
 
 @bot.command()
@@ -169,7 +170,7 @@ async def printer(ctx: discord.ext.commands.Context):
 @bot.command(name='fixname')
 async def fix_name(ctx: discord.ext.commands.Context):
     await ctx.message.delete()
-    stat: structs.userstats = structs.searchid(UserStats, ctx.message.author.id)
+    stat: userstats.userstats = userstats.searchid(UserStats, ctx.message.author.id)
     stat.name = ctx.message.author.name + '#' + str(ctx.message.author.discriminator)
 
 
@@ -309,8 +310,10 @@ async def sys(ctx: discord.ext.commands.Context):
 async def sys_recalc_all(ctx: discord.ext.commands.Context):
     NewStats = []
     await dilogcomm.printlog(bot=bot,
-                             message=await datacommm.calc_alltxtchannels_stats_after_time(guild=guild, time=None,
-                                                                                          MainStatList=NewStats))
+                             message='[команда: {0}]'.format(
+                                 ctx.author.name) + await datacommm.calc_alltxtchannels_stats_after_time(guild=guild,
+                                                                                                         time=None,
+                                                                                                         MainStatList=NewStats))
     global UserStats
     for stat in UserStats:
         stat.clear()

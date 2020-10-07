@@ -1,9 +1,8 @@
-import time
 import discord
 import asyncio
-from generallib import mainlib, structs
+from generallib import mainlib
+from structs import userstats
 from mycommands import dilogcomm
-from usersettings import params
 
 
 # Удаляет переданное в сообщении кол-во сообщений
@@ -49,10 +48,10 @@ async def DeleteExp(MesList, StatsList):
     for mes in MesList:
         if mes.author.bot:
             continue
-        user = structs.searchid(authorsdata, mes.author.id)
+        user = userstats.searchid(authorsdata, mes.author.id)
         # Если пользователь попадается впервые, создаётся новый объект
         if user is None:
-            user = structs.userstats(ID=mes.author.id)
+            user = userstats.userstats(ID=mes.author.id)
             user.name = mes.author.name
             authorsdata.append(user)
         # Вычисление и запись поинжаемых статистик
@@ -63,7 +62,7 @@ async def DeleteExp(MesList, StatsList):
 
     # Понижение статистик и логирование
     for author in authorsdata:
-        userstat: structs.userstats = structs.searchid(StatsList, author.id)
+        userstat: userstats.userstats = userstats.searchid(StatsList, author.id)
         userstat.exp -= author.exp
         userstat.symb_counter -= author.symb_counter
         userstat.mes_counter -= author.mes_counter

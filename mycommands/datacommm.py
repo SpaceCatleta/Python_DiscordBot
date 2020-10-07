@@ -1,13 +1,14 @@
 import discord
 import time
-from generallib import mainlib, structs
+from generallib import mainlib
+from structs import userstats
 from mycommands import dilogcomm
 
 
 # Возващает статистику пользователя
-def user_stats(ctx, StatsList):
+def get_user_stats(ctx, StatsList):
     user: discord.abc.User = ctx.message.mentions[0] if len(ctx.message.mentions) > 0 else ctx.author
-    stat: structs.userstats = structs.searchid(StatsList, user.id)
+    stat: userstats.userstats = userstats.searchid(StatsList, user.id)
     if stat is not None:
         stat.exp = round(stat.exp, 1)
         answerstr = '''{0}:\nОпыт: {1}\nОтправлено сообщений: {2}\nНапечатано символов: {3}\nВремя в голосовых чатах:\
@@ -22,7 +23,7 @@ def user_stats(ctx, StatsList):
 def user_stats_emb(ctx, StatsList):
 
     user: discord.abc.User = ctx.message.mentions[0] if len(ctx.message.mentions) > 0 else ctx.author
-    stat: structs.userstats = structs.searchid(StatsList, user.id)
+    stat: userstats.userstats = userstats.searchid(StatsList, user.id)
     answer = ['Статистика {0}:'.format(user.display_name)]
     if stat is not None:
         stat.exp = round(stat.exp, 1)
@@ -61,15 +62,14 @@ async def calc_stats_after_time(channel: discord.TextChannel, time):
 def stats_update(mes: discord.Message, StatsList):
     if mes.author.bot:
         return
-
-    stat: structs.userstats = structs.searchid(StatsList, mes.author.id)
+    stat: userstats.userstats = userstats.searchid(List=StatsList, ID=mes.author.id)
     if stat is not None:
         symbprint = mainlib.mylen(mes.content)
         stat.symb_counter += symbprint
         stat.mes_counter += 1
         stat.exp += symbprint/10
     else:
-        newstat = structs.userstats(ID=mes.author.id)
+        newstat = userstats.userstats(ID=mes.author.id)
         symbprint = mainlib.mylen(mes.content)
         newstat.symb_counter += symbprint
         newstat.mes_counter += 1
@@ -81,10 +81,10 @@ def stats_update(mes: discord.Message, StatsList):
 async def voice_stats_update(bot, Stats_List, member: discord.Member,
                              before: discord.VoiceState, after: discord.VoiceState):
     if before.channel is None:
-        user = structs.searchid(list=Stats_List, ID=member.id)
+        user = userstats.searchid(list=Stats_List, ID=member.id)
         user.connect_time = time.time()
     if after.channel is None:
-        user = structs.searchid(list=Stats_List, ID=member.id)
+        user = userstats.searchid(list=Stats_List, ID=member.id)
         user.name = member.name
         chat_time = time.time() - user.connect_time
         if chat_time > 10000000:
@@ -104,21 +104,9 @@ async def calculate_txtchannel_stats(channel):
 
 def merge_stats(stats1, stats2):
     for stat in stats2:
-        stat1 = structs.searchid(stats1, stat.id)
+        stat1 = userstats.searchid(stats1, stat.id)
         if stat1 is not None:
             stat1.add(stat)
         else:
             stats1.append(stat)
     return stats1
-
-
-def replace_stats(stats_main, stats_addend):
-    len = len(stats_main)
-    i = 0
-    while i < len:
-        stat2 = structs.searchid(stats_addend, stats_main[i].id)
-        if stat2 is not None:
-            stats_main[i] = stat2
-        else:
-            stats_main[i].clear()
-        i += 1

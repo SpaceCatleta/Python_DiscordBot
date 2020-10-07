@@ -1,6 +1,6 @@
 # Поиск по id
-def searchid(list, ID: int):
-    for stat in list:
+def searchid(List: list, ID: int):
+    for stat in List:
         if stat.id == ID:
             return stat
     return None
@@ -50,3 +50,7 @@ class userstats(object):
         self.symb_counter = 0
         if vc_clear:
             self.vc_counter = 0
+
+    def to_string(self):
+        return 'name: {0}\nID: {1}\n Exp: {2}\n MesCount {3}\n SymbCount: {4}\n VCTime: {5}s.'.format(self.name,
+            self.id, self.exp, self.mes_counter, self.symb_counter, self.vc_counter)

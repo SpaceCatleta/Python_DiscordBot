@@ -1,4 +1,5 @@
-from generallib import structs, mainlib
+from generallib import mainlib
+from structs import userstats
 
 
 # записывет данные о статистике напечатанных символов в указаннный файл
@@ -21,7 +22,7 @@ def ReadSymbolsStat(filename):
         statstr = stroke[1].split('|')
         if len(statstr)<6:
             statstr.append('NoName')
-        statuser = structs.userstats(ID=int(stroke[0]), Exp=float(statstr[0]), Lvl=int(statstr[1]), MesCounter=int(statstr[2]), SymbCounter=int(statstr[3]), VCCounter=float(statstr[4]), Name=str(statstr[5]))
+        statuser = userstats.userstats(ID=int(stroke[0]), Exp=float(statstr[0]), Lvl=int(statstr[1]), MesCounter=int(statstr[2]), SymbCounter=int(statstr[3]), VCCounter=float(statstr[4]), Name=str(statstr[5]))
         srlist.append(statuser)
 
     file.close()
