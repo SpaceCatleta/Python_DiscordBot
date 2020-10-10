@@ -3,56 +3,53 @@ from dateutil.tz import tzoffset
 from datetime import datetime
 from discord.ext import commands
 from usersettings import params
+from data import sqlitedb
 from configs import config, con_config
 from generallib import textfile, mainlib
 from structs import userstats
-from mycommands import simplecomm, dilogcomm, moderationcomm, systemcomm, datacommm, settingscomm, infocomm, dsVote
+from mycommands import simplecomm, dilogcomm, moderationcomm, datacommm, settingscomm, infocomm, dsVote
 
 
 # Так как мы указали префикс в settings, обращаемся к словарю с ключом prefix.
 bot = commands.Bot(command_prefix=con_config.settings['prefix'])
 current_vote: dsVote.Vote = None
 guild: discord.Guild
-UserStats = []
+DB: sqlitedb.BotDataBase
+settingslist = {}
 
 
 @bot.event
 async def on_ready():
-    global guild, UserStats
+    global guild, DB, settingslist
+    DB = sqlitedb.BotDataBase('botdata.db')
     guild = bot.get_guild(con_config.settings['home_guild_id'])
-    readlist = textfile.ReadSymbolsStat(config.params['SymbolsStatisticsFile'])
     await params.init_dictinoraies()
+    settingslist = DB.select_settings()
     await dilogcomm.printlog(bot=bot,
                              message='обнаружено время последней записи: {0}'.format(params.shutdownparams['time']))
     time: datetime = datetime.strptime(params.shutdownparams['time'], "%Y-%m-%d %H:%M:%S")
     n = 4
     time.astimezone(tzoffset("UTC+{}".format(n), n * 60 * 60))
     await dilogcomm.printlog(bot=bot,
-                             message=await datacommm.calc_alltxtchannels_stats_after_time(guild=guild, time=time,
-                                                                                          MainStatList=UserStats))
-    if len(readlist) == 0:
-        for user in guild.members:
-            UserStats.append(userstats.userstats(user.id, 0))
-    else:
-        UserStats = readlist
+        message=await datacommm.calc_alltxtchannels_stats_after_time(guild=guild, time=time, DB=DB))
     await dilogcomm.printlog(bot=bot, message='bot online')
 
 
 @bot.event
 async def on_message(mes: discord.Message):
-    datacommm.stats_update(mes, UserStats)
+    datacommm.stats_update(mes=mes, DB=DB)
     await bot.process_commands(message=mes)
 
 
 @bot.event
 async def on_member_join(member):
-    UserStats.append(userstats.userstats(ID=member.id))
-    await member.add_roles(mainlib.Findrole(rolelist=guild.roles, serchrole='неопознанная сущность'))
+    DB.insert(userstats.userstats(ID=member.id, Name=member.name))
+    await member.add_roles(mainlib.Findrole(rolelist=guild.roles, serchrole=settingslist['base_role']))
 
 
 @bot.event
 async def on_voice_state_update(member: discord.Member, before: discord.VoiceState, after: discord.VoiceState):
-    await datacommm.voice_stats_update(bot=bot, Stats_List=UserStats, member=member, before=before, after=after)
+    await datacommm.voice_stats_update(bot=bot, DB=DB, member=member, before=before, after=after)
 
 
 @bot.event
@@ -118,12 +115,6 @@ async def boot_vote(ctx: discord.ext.commands.Context):
     current_vote = None
 
 
-# Тестовоая команда
-@bot.command()
-async def test(ctx: discord.ext.commands.Context):
-    await ctx.message.delete()
-
-
 @bot.command()
 async def count(ctx: discord.ext.commands.Context):
     await ctx.message.delete()
@@ -170,20 +161,16 @@ async def printer(ctx: discord.ext.commands.Context):
 @bot.command(name='fixname')
 async def fix_name(ctx: discord.ext.commands.Context):
     await ctx.message.delete()
-    stat: userstats.userstats = userstats.searchid(UserStats, ctx.message.author.id)
+    stat: userstats.userstats = DB.select(ctx.message.author.id)
     stat.name = ctx.message.author.name + '#' + str(ctx.message.author.discriminator)
-
-
-@bot.command(name='react')
-async def reaction(ctx: discord.ext.commands.Context):
-    await ctx.message.add_reaction(emoji="🔟")
+    DB.update(stat=stat)
 
 
 # Показывает статистику указанного пользователя
 @bot.command()
 async def stats(ctx: discord.ext.commands.Context):
     await ctx.message.delete()
-    emb_list = datacommm.user_stats_emb(ctx=ctx, StatsList=UserStats)
+    emb_list = datacommm.user_stats_emb(ctx=ctx, DB=DB)
     emb = discord.Embed(color=discord.colour.Color.dark_magenta(),
                         title=emb_list[0], description=emb_list[1])
     await ctx.send(embed=emb)
@@ -201,8 +188,15 @@ async def bomb(ctx: discord.ext.commands.Context):
 
 # Выдаёт информацию о коммандах
 @bot.command(name='помощь')
-async def commands_information(ctx: discord.ext.commands.Context):
+async def userscom_information(ctx: discord.ext.commands.Context):
     await ctx.send('```{0}```'.format(textfile.RadAll(config.params['info'])))
+
+
+# Выдаёт информацию о коммандах
+@bot.command(name='moders')
+@commands.has_guild_permissions(manage_channels=True)
+async def userscom_information(ctx: discord.ext.commands.Context):
+    await ctx.send('```{0}```'.format(textfile.RadAll('data\info.txt') + '\n' + textfile.RadAll('data\info_moders.txt')))
 
 
 # ГРУППА
@@ -245,27 +239,27 @@ async def mod(ctx: discord.ext.commands.Context):
 # Утсанавливает роль для мута
 @mod.command(name='moot')
 async def give_moot(ctx: discord.ext.commands.Context):
-    await moderationcomm.give_timer_role(bot=bot, ctx=ctx, RoleList=guild.roles, rolename=params.accessparams['moot'])
+    await moderationcomm.give_timer_role(bot=bot, ctx=ctx, RoleList=guild.roles, rolename=settingslist['moot'])
 
 
 # Утсанавливает роль для войс мута
 @mod.command(name='voicemoot')
 async def give_voice_moot(ctx: discord.ext.commands.Context):
     await moderationcomm.\
-        give_timer_role(bot=bot, ctx=ctx, RoleList=guild.roles, rolename=params.accessparams['voicemoot'])
+        give_timer_role(bot=bot, ctx=ctx, RoleList=guild.roles, rolename=settingslist['vc_moot'])
 
 
 # Утсанавливает роль с ограниченныи функциями
 @mod.command(name='banfunc')
 async def give_ban_func(ctx: discord.ext.commands.Context):
     await moderationcomm.\
-        give_timer_role(bot=bot, ctx=ctx, RoleList=guild.roles, rolename=params.accessparams['banfunc'])
+        give_timer_role(bot=bot, ctx=ctx, RoleList=guild.roles, rolename=settingslist['ban_functions'])
 
 
 # Удаление сообщений
 @mod.command(name='clearmes')
 async def clearmes(ctx: discord.ext.commands.Context):
-    await moderationcomm.deletemessages(bot, ctx=ctx, stats=UserStats)
+    await moderationcomm.deletemessages(bot, ctx=ctx, DB=DB)
 
 
 # ГРУППА
@@ -281,19 +275,25 @@ async def set(ctx: discord.ext.commands.Context):
 # Утсанавливает роль с ограниченныи функциями
 @set.command(name='banfunc')
 async def set_ban_func_role(ctx: discord.ext.commands.Context):
-    await settingscomm.set_Access_role(bot=bot, accessname='banfunc', ctx=ctx)
+    await settingscomm.set_Access_role(bot=bot, DB=DB, accessname='ban_functions', ctx=ctx)
 
 
 # Утсанавливает роль с ограниченныи функциями
 @set.command(name='moot')
 async def set_moot_role(ctx: discord.ext.commands.Context):
-    await settingscomm.set_Access_role(bot=bot, accessname='moot', ctx=ctx)
+    await settingscomm.set_Access_role(bot=bot, DB=DB, accessname='moot', ctx=ctx)
 
 
 # Утсанавливает роль с ограниченныи функциями
-@set.command(name='voicemoot')
+@set.command(name='vcmoot')
 async def set_voice_moot_role(ctx: discord.ext.commands.Context):
-    await settingscomm.set_Access_role(bot=bot, accessname='voicemoot', ctx=ctx)
+    await settingscomm.set_Access_role(bot=bot, DB=DB, accessname='vc_moot', ctx=ctx)
+
+
+# Утсанавливает роль с ограниченныи функциями
+@set.command(name='baserole')
+async def set_base_role(ctx: discord.ext.commands.Context):
+    await settingscomm.set_Access_role(bot=bot, DB=DB, accessname='base_role', ctx=ctx)
 
 
 # ГРУППА
@@ -308,33 +308,22 @@ async def sys(ctx: discord.ext.commands.Context):
 
 @sys.command(name='recalc_stats')
 async def sys_recalc_all(ctx: discord.ext.commands.Context):
+    global DB
     NewStats = []
     await dilogcomm.printlog(bot=bot,
-                             message='[команда: {0}]'.format(
-                                 ctx.author.name) + await datacommm.calc_alltxtchannels_stats_after_time(guild=guild,
-                                                                                                         time=None,
-                                                                                                         MainStatList=NewStats))
-    global UserStats
-    for stat in UserStats:
-        stat.clear()
-    UserStats = datacommm.merge_stats(UserStats, NewStats)
-
-
-# Запись данных в файл
-@sys.command(name='write')
-async def write_txt(ctx: discord.ext.commands.Context):
-    await systemcomm.writestats(bot=bot, UserStats=UserStats)
+        message='[команда: {0}]'.format(ctx.author.name) +
+        await datacommm.calc_alltxtchannels_stats_after_time(guild=guild, time=None, DB=DB))
+    for stat in NewStats:
+        DB.update(stat)
 
 
 # команда завершения работы
 @sys.command(name='off')
 async def sys_shutdown(ctx: discord.ext.commands.Context):
-    await systemcomm.writestats(bot=bot, UserStats=UserStats)
     params.shutdownparams['time'] = datetime.strftime(datetime.utcnow(), "%Y-%m-%d %H:%M:%S")
     textfile.WriteParams(params.shutdownparams, config.params['shutdown_info'], delsymb='=')
     await dilogcomm.printlog(bot=bot, message='bot offline')
     await bot.close()
-
 
 
 # Обращаемся к словарю settings с ключом token, для получения токена

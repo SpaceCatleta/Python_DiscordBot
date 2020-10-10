@@ -3,10 +3,11 @@ import asyncio
 from generallib import mainlib
 from structs import userstats
 from mycommands import dilogcomm
+from data import sqlitedb
 
 
 # Удаляет переданное в сообщении кол-во сообщений
-async def deletemessages(bot, ctx: discord.ext.commands.Context, stats):
+async def deletemessages(bot, ctx: discord.ext.commands.Context, DB: sqlitedb.BotDataBase):
     STR: str = ctx.message.content
     LIST = STR.split(' ')
     if len(LIST) > 2:
@@ -33,14 +34,14 @@ async def deletemessages(bot, ctx: discord.ext.commands.Context, stats):
     addlog: str = ''
     if len(LIST) > 3:
         if LIST[3] == '-exp':
-            addlog = await DeleteExp(MesList=meslist, StatsList=stats)
+            addlog = await DeleteExp(MesList=meslist, DB=DB)
     await TCH.delete_messages(meslist)
     await dilogcomm.printlog(bot=bot, author=ctx.author, message='С канала "{0}"\
  удалено {1} сообщений {2}'.format(ctx.channel.name, str(n), addlog))
 
 
 # Обнуляет символы в статистике, полученные за указанные сообщения
-async def DeleteExp(MesList, StatsList):
+async def DeleteExp(MesList, DB: sqlitedb.BotDataBase):
     deflog: str = ""
     authorsdata = []
 
@@ -56,16 +57,13 @@ async def DeleteExp(MesList, StatsList):
             authorsdata.append(user)
         # Вычисление и запись поинжаемых статистик
         symb_counter = mainlib.mylen(mes.content)
-        user.symb_counter += symb_counter
-        user.exp += symb_counter / 10
-        user.mes_counter += 1
+        user.symb_counter -= symb_counter
+        user.exp -= symb_counter / 10
+        user.mes_counter -= 1
 
     # Понижение статистик и логирование
     for author in authorsdata:
-        userstat: userstats.userstats = userstats.searchid(StatsList, author.id)
-        userstat.exp -= author.exp
-        userstat.symb_counter -= author.symb_counter
-        userstat.mes_counter -= author.mes_counter
+        DB.update_with_addition(stat=author)
         deflog += '\n > {0} > удалено: {1} сообщений, {2} символов,\
  {3} опыта'.format(author.name, author.mes_counter, author.symb_counter,  author.exp)
     return deflog
