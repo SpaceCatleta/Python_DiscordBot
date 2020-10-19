@@ -67,7 +67,10 @@ async def tm(ctx: discord.ext.commands.Context):
 
 
 @bot.command(name='add_calc')
+@commands.has_guild_permissions(administrator=True)
 async def add_calc(ctx: discord.ext.commands.Context):
+    await dilogcomm.printlog(bot=bot, author=ctx.message.author,
+                             message='вызвал коанду -add_calc.'.format(ctx.message.author.name))
     await ctx.message.delete()
     time: datetime = datetime.strptime(params.shutdownparams['time'], "%Y-%m-%d %H:%M:%S")
     n = 4
@@ -104,6 +107,8 @@ async def txtchannels(ctx: discord.ext.commands.Context):
 # Начинает голосование
 @bot.command(name='vote')
 async def boot_vote(ctx: discord.ext.commands.Context):
+    await dilogcomm.printlog(bot=bot, author=ctx.message.author,
+                             message='запущено голосование'.format(ctx.message.author.name))
     await ctx.message.delete()
     global current_vote
     if current_vote is not None:
@@ -117,6 +122,8 @@ async def boot_vote(ctx: discord.ext.commands.Context):
 
 @bot.command()
 async def count(ctx: discord.ext.commands.Context):
+    await dilogcomm.printlog(bot=bot, author=ctx.message.author,
+                             message='вызвал коанду -count.'.format(ctx.message.author.name))
     await ctx.message.delete()
     counter: int = 0
     async for mes in ctx.channel.history(limit=10000, oldest_first=None):
@@ -126,6 +133,8 @@ async def count(ctx: discord.ext.commands.Context):
 
 @bot.command()
 async def calc(ctx: discord.ext.commands.Context):
+    await dilogcomm.printlog(bot=bot, author=ctx.message.author,
+                             message='вызвана команда -calc.'.format(ctx.message.author.name))
     await ctx.message.delete()
     newstat = await datacommm.calculate_txtchannel_stats(ctx.channel)
     answer = ''
@@ -137,6 +146,8 @@ async def calc(ctx: discord.ext.commands.Context):
 @bot.command()
 @commands.has_guild_permissions(administrator=True)
 async def calc_all(ctx: discord.ext.commands.Context):
+    await dilogcomm.printlog(bot=bot, author=ctx.message.author,
+                             message='вызвана команда -calc_all.'.format(ctx.message.author.name))
     await ctx.message.delete()
     g = ctx.author.guild
     new_stats = []
@@ -160,6 +171,8 @@ async def printer(ctx: discord.ext.commands.Context):
 
 @bot.command(name='fixname')
 async def fix_name(ctx: discord.ext.commands.Context):
+    await dilogcomm.printlog(bot=bot, author=ctx.message.author,
+                             message='вызвана команда -fixname.'.format(ctx.message.author.name))
     await ctx.message.delete()
     stat: userstats.userstats = DB.select(ctx.message.author.id)
     stat.name = ctx.message.author.name + '#' + str(ctx.message.author.discriminator)
@@ -169,6 +182,8 @@ async def fix_name(ctx: discord.ext.commands.Context):
 # Показывает статистику указанного пользователя
 @bot.command()
 async def stats(ctx: discord.ext.commands.Context):
+    await dilogcomm.printlog(bot=bot, author=ctx.message.author,
+                             message='вызвана команда -stats.'.format(ctx.message.author.name))
     await ctx.message.delete()
     emb_list = datacommm.user_stats_emb(ctx=ctx, DB=DB)
     emb = discord.Embed(color=discord.colour.Color.dark_magenta(),
@@ -179,6 +194,8 @@ async def stats(ctx: discord.ext.commands.Context):
 # спам линком в чате
 @bot.command()
 async def bomb(ctx: discord.ext.commands.Context):
+    await dilogcomm.printlog(bot=bot, author=ctx.message.author,
+                             message='вызвана команда -bomb.'.format(ctx.message.author.name))
     for role in ctx.author.roles:
         if role.name == params.accessparams['banfunc']:
             return
@@ -189,13 +206,16 @@ async def bomb(ctx: discord.ext.commands.Context):
 # Выдаёт информацию о коммандах
 @bot.command(name='помощь')
 async def userscom_information(ctx: discord.ext.commands.Context):
+    await dilogcomm.printlog(bot=bot, author=ctx.message.author,
+                             message='вызвана команда -помошь.'.format(ctx.message.author.name))
     await ctx.send('```{0}```'.format(textfile.RadAll(config.params['info'])))
-
 
 # Выдаёт информацию о коммандах
 @bot.command(name='moders')
 @commands.has_guild_permissions(manage_channels=True)
 async def userscom_information(ctx: discord.ext.commands.Context):
+    await dilogcomm.printlog(bot=bot, author=ctx.message.author,
+                             message='вызвана команда -moders.'.format(ctx.message.author.name))
     await ctx.send('```{0}```'.format(textfile.RadAll('data\info.txt') + '\n' + textfile.RadAll('data\info_moders.txt')))
 
 
@@ -308,6 +328,8 @@ async def sys(ctx: discord.ext.commands.Context):
 
 @sys.command(name='recalc_stats')
 async def sys_recalc_all(ctx: discord.ext.commands.Context):
+    await dilogcomm.printlog(bot=bot, author=ctx.message.author,
+                             message='вызвана команда -recalc_stats.'.format(ctx.message.author.name))
     global DB
     NewStats = []
     await dilogcomm.printlog(bot=bot,
@@ -322,6 +344,8 @@ async def sys_recalc_all(ctx: discord.ext.commands.Context):
 async def sys_shutdown(ctx: discord.ext.commands.Context):
     params.shutdownparams['time'] = datetime.strftime(datetime.utcnow(), "%Y-%m-%d %H:%M:%S")
     textfile.WriteParams(params.shutdownparams, config.params['shutdown_info'], delsymb='=')
+    await dilogcomm.printlog(bot=bot, author=ctx.message.author,
+                             message='инициировано выключение.'.format(ctx.message.author.name))
     await dilogcomm.printlog(bot=bot, message='bot offline')
     await bot.close()
 

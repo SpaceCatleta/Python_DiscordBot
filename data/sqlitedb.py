@@ -32,7 +32,7 @@ class BotDataBase:
         WHERE id={0}
         """.format(id))
         row: sql.Row = self.cursor.fetchone()
-        return userstats.userstats(ID=id,  Exp=int(row[1]), Lvl=int(row[2]),
+        return None if row is None else userstats.userstats(ID=id,  Exp=int(row[1]), Lvl=int(row[2]),
             MesCounter=int(row[3]), SymbCounter=int(row[4]),
             VCCounter=int(row[5]), Name=row[6])
 

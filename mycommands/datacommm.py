@@ -48,7 +48,10 @@ async def calc_alltxtchannels_stats_after_time(guild: discord.Guild, time, DB: s
         deflog += '\n > {0} > обнаружено: {1} сообщений, {2} символов;\
  начислено {3} опыта'.format(user.name, user.mes_counter, user.symb_counter,  mainlib.print_number(user.exp, 1))
     for stat in StatList:
-        DB.update_with_addition(stat=stat)
+        if DB.select(stat.id) is None:
+            DB.insert(stat)
+        else:
+            DB.update_with_addition(stat=stat)
     return deflog
 
 
