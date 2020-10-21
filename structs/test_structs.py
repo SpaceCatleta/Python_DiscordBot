@@ -14,7 +14,6 @@ class Test_UserStats(unittest.TestCase):
         self.us2 = struct.userstats(ID=2, SymbCounter=20,
                                     MesCounter=2, VCCounter=20, Exp=4, Lvl=2, Name='us2')
 
-
     def test_userstats_add(self):
         print('Testing structs.userstats.add()')
         self.us1.add(self.us2)
@@ -37,6 +36,11 @@ class Test_UserStats(unittest.TestCase):
         self.assertEqual(0, self.us1.vc_counter,
                          'vc_counter should be 0 [clear(vc_clear=True)] actual ' + str(self.us1.vc_counter))
 
+    def test_calculate_exp(self):
+        print('Testing structs.userstats.calculate_exp()')
+        self.us1.calculate_exp()
+        self.assertEqual(1.1, self.us1.exp, 'exp mismatch')
+
 
 # Тестирует класс structs.UsersstatsList
 class Test_UsersStatsList(unittest.TestCase):
@@ -51,12 +55,28 @@ class Test_UsersStatsList(unittest.TestCase):
         self.usl2.push(struct.userstats(ID=2, Exp=30))
         self.usl2.push(struct.userstats(ID=3, Exp=40))
 
+    def test_push(self):
+        print('Testing structs.userstatslist.push()')
+        self.usl1 = usList.UserStatsList()
+        self.usl1.push(struct.userstats(ID=1, Exp=10))
+        self.assertEqual(1, self.usl1.count, 'count mismatch')
+
     def test_userstatslist_search_id(self):
         print('Testing structs.userstatslist.search_id()')
         us: struct.userstats = self.usl1.search_id(1)
         self.assertEqual(1, us.id, 'mismatch')
-        us =  self.usl1.search_id(10)
+        us = self.usl1.search_id(10)
         self.assertEqual(None, us, 'mismatch')
+
+    def test_pop_by_id(self):
+        print('Testing structs.userstatslist.pop_by_id()')
+        self.usl1.push(struct.userstats(ID=3, Exp=40))
+        self.assertEqual(3, self.usl1.count, 'prepare error')
+        us: struct.userstats = self.usl1.pop_by_id(ID=2)
+        self.assertEqual(2, self.usl1.count, 'count error')
+        self.assertEqual(2, us.id, 'id mismatch')
+        self.assertEqual(20, us.exp, 'value(Exp) error')
+
 
     def test_userstatslist_merge_with(self):
         print('Testing structs.userstatslist.merge_with()')

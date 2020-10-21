@@ -26,10 +26,18 @@ class UserStatsList(object):
         self.UsersStats.append(item)
         self.count += 1
 
-    # изъятие элемента из списка
+    # изъятие элемента из списка по индексу
     def pop(self, index: int = count - 1):
         self.count -= 1
         return self.UsersStats.pop(index)
+
+    # изъятие элемента из списка по ID
+    def pop_by_id(self, ID: int):
+        length = len(self.UsersStats)
+        for i in range(0, length):
+            if self.UsersStats[i].id == ID:
+                return self.pop(i)
+        return -1
 
     # поиск по ID
     def search_id(self, ID: int):

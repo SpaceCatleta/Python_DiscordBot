@@ -1,4 +1,5 @@
 import discord
+from mycommands import dilogcomm
 
 
 # Выдаёт информацию о пользователе
@@ -9,7 +10,16 @@ def get_member_information(ctx: discord.ext.commands.Context):
 
 
 # информация о сервере
-async def get_guild_information(ctx: discord.ext.commands.Context):
-    return 'Название сервера: {0}\nID сервера: {1}\nКоличество участников: {2}'.\
-        format(ctx.author.guild.name, ctx.author.guild.id, ctx.author.guild.member_count)
+def get_guild_information(ctx: discord.ext.commands.Context):
+    return 'Название сервера: {0}\nID сервера: {1}\nКоличество участников: {2}'.format(ctx.author.guild.name, ctx.author.guild.id, ctx.author.guild.member_count)
+
+
+# Информация о кол-ве сообщений в канале
+async def count_channel_messages(bot, ctx: discord.ext.commands.Context):
+    await dilogcomm.printlog(bot=bot, author=ctx.message.author,
+                             message='вызвал коанду -count'.format(ctx.message.author.name))
+    counter: int = 0
+    async for mes in ctx.channel.history(limit=10000, oldest_first=None):
+        counter += 1
+    return '''в канале "{0}" {1} сообщений'''.format(ctx.channel.name, counter)
 

@@ -1,7 +1,7 @@
 import discord
 import time
 from generallib import mainlib
-from structs import userstats
+from structs import userstats, userstatslist
 from mycommands import dilogcomm
 from data import sqlitedb
 
@@ -84,6 +84,26 @@ def stats_update_list(mes: discord.Message, StatsList: list):
 
 
 # Обновляет статистику пользователя по отправленному им сообщщению
+def stats_update_userstatlist(mes: discord.Message, StatsList: userstatslist.UserStatsList):
+    if mes.author.bot:
+        return
+    stat: userstats.userstats = StatsList.search_id(ID=mes.author.id)
+    if stat is not None:
+        symbprint = mainlib.mylen(mes.content)
+        stat.symb_counter += symbprint
+        stat.mes_counter += 1
+        stat.exp += symbprint/10
+    else:
+        newstat = userstats.userstats(ID=mes.author.id)
+        symbprint = mainlib.mylen(mes.content)
+        newstat.symb_counter += symbprint
+        newstat.mes_counter += 1
+        newstat.exp += symbprint / 10
+        newstat.name = mes.author.name + str(mes.author.discriminator)
+        StatsList.push(newstat)
+
+
+# Обновляет статистику пользователя по отправленному им сообщщению
 def stats_update(mes: discord.Message, DB: sqlitedb.BotDataBase):
     if mes.author.bot:
         return
@@ -105,28 +125,47 @@ def stats_update(mes: discord.Message, DB: sqlitedb.BotDataBase):
 
 
 async def voice_stats_update(bot, DB: sqlitedb.BotDataBase, member: discord.Member,
-                             before: discord.VoiceState, after: discord.VoiceState):
+    Processing: userstatslist.UserStatsList, before: discord.VoiceState, after: discord.VoiceState):
     if before.channel is None:
-        user = DB.select(member.id)
+        user = userstats.userstats(ID=member.id)
         user.connect_time = time.time()
+        Processing.push(user)
     if after.channel is None:
-        user = DB.select(member.id)
-        user.name = member.name
-        chat_time = time.time() - user.connect_time
-        if chat_time > 10000000:
-            await dilogcomm.printlog(bot=bot, message='{0} - ошибка вычисления в гс чате [{1}]'.
-                                     format(user.name, chat_time))
+        user = Processing.pop_by_id(ID=member.id)
+        vc_time_counter = time.time() - user.connect_time
+        user.vc_counter = time.time() - user.connect_time
+        if vc_time_counter > 10000000:
+            await dilogcomm.printlog(bot=bot, message='{0} - ошибка вычисления времени в гс чате [{1}]'.
+                                     format(member.name, vc_time_counter))
         else:
-            user.vc_counter += chat_time
-            DB.update(stat=user)
-            await dilogcomm.printlog(bot=bot, message='{0} пробыл в гс {1}сек.'.format(user.name, chat_time))
+            DB.update_with_addition(stat=user)
+            await dilogcomm.printlog(bot=bot, message='{0} пробыл в гс {1}сек.'.format(member.name, vc_time_counter))
 
 
 async def calculate_txtchannel_stats(channel):
-    newstat = []
+    newstat = userstatslist.UserStatsList()
     async for mes in channel.history(limit=10000, oldest_first=None):
-        stats_update(mes, newstat)
+        stats_update_userstatlist(mes=mes, StatsList=newstat)
     return newstat
+
+
+async def calculate_all_txtchannel_stats(ctx):
+    g = ctx.author.guild
+    new_stats: userstatslist.UserStatsList = userstatslist.UserStatsList()
+    counter: int = 0
+    for channel in g.channels:
+        if issubclass(type(channel), discord.TextChannel):
+            counter += 1
+            new_stats.merge_with(await calculate_txtchannel_stats(channel))
+    return new_stats
+
+
+async def print_all_txtchannel_stats(ctx):
+    stats = await calculate_all_txtchannel_stats(ctx=ctx)
+    answer = 'статистика из всех каналов:\n'
+    for stat in stats:
+        answer += '{0} напечатал {1} символов\n'.format(stat.name, stat.symb_counter)
+    return answer
 
 
 def merge_stats(stats1, stats2):

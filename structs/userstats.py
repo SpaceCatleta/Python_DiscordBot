@@ -1,3 +1,6 @@
+from generallib import mainlib
+
+
 # Поиск по id
 def searchid(List: list, ID: int):
     for stat in List:
@@ -50,6 +53,10 @@ class userstats(object):
         self.symb_counter = 0
         if vc_clear:
             self.vc_counter = 0
+
+    # Рассчитывает опыт пользователя
+    def calculate_exp(self):
+        self.exp = float(mainlib.print_number(self.mes_counter / 10 + self.symb_counter / 10, 1))
 
     def to_string(self):
         return 'name: {0}\nID: {1}\n Exp: {2}\n MesCount {3}\n SymbCount: {4}\n VCTime: {5}s.'.format(self.name,
