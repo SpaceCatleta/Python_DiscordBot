@@ -56,7 +56,7 @@ class userstats(object):
 
     # Рассчитывает опыт пользователя
     def calculate_exp(self):
-        self.exp = float(mainlib.print_number(self.mes_counter / 10 + self.symb_counter / 10, 1))
+        self.exp = float(round(self.mes_counter / 10 + self.symb_counter / 10, 1))
 
     def to_string(self):
         return 'name: {0}\nID: {1}\n Exp: {2}\n MesCount {3}\n SymbCount: {4}\n VCTime: {5}s.'.format(self.name,

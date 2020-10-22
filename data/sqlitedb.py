@@ -32,9 +32,9 @@ class BotDataBase:
         WHERE id={0}
         """.format(id))
         row: sql.Row = self.cursor.fetchone()
-        return None if row is None else userstats.userstats(ID=id,  Exp=int(row[1]), Lvl=int(row[2]),
+        return None if row is None else userstats.userstats(ID=id,  Exp=float(row[1]), Lvl=int(row[2]),
             MesCounter=int(row[3]), SymbCounter=int(row[4]),
-            VCCounter=int(row[5]), Name=row[6])
+            VCCounter=float(row[5]), Name=row[6])
 
     def insert(self, stat: userstats.userstats):
         self.cursor.execute("insert into userstats values ({0}, {1}, {2}, {3}, {4}, {5}, '{6}');".format(stat.id,

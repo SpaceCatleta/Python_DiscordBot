@@ -13,7 +13,7 @@ def get_user_stats(ctx, DB: sqlitedb.BotDataBase):
     if stat is not None:
         stat.exp = round(stat.exp, 1)
         answerstr = '''{0}:\nОпыт: {1}\nОтправлено сообщений: {2}\nНапечатано символов: {3}\nВремя в голосовых чатах:\
- {4}'''.format(user.display_name, mainlib.print_number(stat.exp, 1), stat.mes_counter, stat.symb_counter,
+ {4}'''.format(user.display_name, round(stat.exp, 1), stat.mes_counter, stat.symb_counter,
                time.strftime("%H:%M:%S", time.gmtime(stat.vc_counter)).replace(' ', ''))
         return answerstr
     else:
@@ -21,20 +21,36 @@ def get_user_stats(ctx, DB: sqlitedb.BotDataBase):
 
 
 # Возващает статистику пользователя для Embed
-def user_stats_emb(ctx, DB: sqlitedb.BotDataBase):
+def user_stats_emb2(ctx, DB: sqlitedb.BotDataBase):
 
     user: discord.abc.User = ctx.message.mentions[0] if len(ctx.message.mentions) > 0 else ctx.author
     stat: userstats.userstats = DB.select(user.id)
-    answer = ['Статистика {0}:'.format(user.display_name)]
-    if stat is not None:
-        stat.exp = round(stat.exp, 1)
-        answer_str = 'Опыт: {0}\nОтправлено сообщений: {1}\nНапечатано символов: {2}\nВремя в голосовых чатах:\
- {3}'.format(mainlib.print_number(stat.exp, 1), stat.mes_counter, stat.symb_counter,
+    if stat is None:
+        return discord.Embed(description=user.display_name + ' - Данные не найдены')
+    title = 'Статистика {0}:'.format(user.display_name)
+    discr = 'Опыт: {0}\nОтправлено сообщений: {1}\nНапечатано символов: {2}\nВремя в голосовых чатах:\
+ {3}'.format(round(stat.exp, 1), stat.mes_counter, stat.symb_counter,
              time.strftime("%H:%M:%S", time.gmtime(stat.vc_counter)).replace(' ', ''))
-        answer.append(answer_str)
-        return answer
-    else:
-        return str(user.display_name + ' - Данные не найдены')
+    emb: discord.Embed = discord.Embed(color=discord.colour.Color.dark_magenta(),
+                                       title=title, description=discr)
+    return emb
+
+
+# Возващает статистику пользователя для Embed
+def user_stats_emb(ctx, DB: sqlitedb.BotDataBase) -> discord.Embed:
+    user: discord.abc.User = ctx.message.mentions[0] if len(ctx.message.mentions) > 0 else ctx.author
+    stat: userstats.userstats = DB.select(user.id)
+    if stat is None:
+        return discord.Embed(description=user.display_name + ' - Данные не найдены')
+    emb: discord.Embed = discord.Embed(color=discord.colour.Color.dark_magenta(),
+                                       title='Пользователь {0}:'.format(user.display_name))
+    emb.set_thumbnail(url=user.avatar_url)
+    emb.add_field(name='Уровень:', value=stat.lvl)
+    emb.add_field(name='Опыт:', value=str(round(stat.exp, 1)) + '/99999')
+    emb.add_field(name='Статистика:', value='Отправлено сообщений: {0}\nНапечатано символов: {1}\
+    \nВремя в голосовых чатах:{2}'.format(stat.mes_counter, stat.symb_counter,
+        time.strftime("%H:%M:%S", time.gmtime(stat.vc_counter)).replace(' ', '')), inline=False)
+    return emb
 
 
 # Расчитывает статистику на всех текстовых каналах с указанного времени
@@ -46,7 +62,7 @@ async def calc_alltxtchannels_stats_after_time(guild: discord.Guild, time, DB: s
     deflog = 'Был произведён поиск сообщений после последней записи статистики'
     for user in StatList:
         deflog += '\n > {0} > обнаружено: {1} сообщений, {2} символов;\
- начислено {3} опыта'.format(user.name, user.mes_counter, user.symb_counter,  mainlib.print_number(user.exp, 1))
+ начислено {3} опыта'.format(user.name, user.mes_counter, user.symb_counter,  round(user.exp, 1))
     for stat in StatList:
         if DB.select(stat.id) is None:
             DB.insert(stat)
@@ -72,7 +88,7 @@ def stats_update_list(mes: discord.Message, StatsList: list):
         symbprint = mainlib.mylen(mes.content)
         stat.symb_counter += symbprint
         stat.mes_counter += 1
-        stat.exp += symbprint/10
+        stat.exp += symbprint/10 + 0.1
     else:
         newstat = userstats.userstats(ID=mes.author.id)
         symbprint = mainlib.mylen(mes.content)
@@ -92,7 +108,7 @@ def stats_update_userstatlist(mes: discord.Message, StatsList: userstatslist.Use
         symbprint = mainlib.mylen(mes.content)
         stat.symb_counter += symbprint
         stat.mes_counter += 1
-        stat.exp += symbprint/10
+        stat.exp += symbprint/10 + 0.1
     else:
         newstat = userstats.userstats(ID=mes.author.id)
         symbprint = mainlib.mylen(mes.content)
@@ -109,10 +125,10 @@ def stats_update(mes: discord.Message, DB: sqlitedb.BotDataBase):
         return
     stat: userstats.userstats = DB.select(mes.author.id)
     if stat is not None:
-        symbprint = mainlib.mylen(mes.content)
+        symbprint: float = mainlib.mylen(mes.content)
         stat.symb_counter += symbprint
         stat.mes_counter += 1
-        stat.exp += symbprint/10
+        stat.exp += float(symbprint)/10 + 0.1
         DB.update(stat=stat)
     else:
         newstat = userstats.userstats(ID=mes.author.id)

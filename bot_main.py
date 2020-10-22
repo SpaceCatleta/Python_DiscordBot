@@ -17,7 +17,7 @@ guild: discord.Guild
 DB: sqlitedb.BotDataBase
 ProcessingUsers: userstatslist.UserStatsList
 settingslist = {}
-
+shortstart: bool = True
 
 @bot.event
 async def on_ready():
@@ -27,6 +27,9 @@ async def on_ready():
     guild = bot.get_guild(con_config.settings['home_guild_id'])
     await params.init_dictinoraies()
     settingslist = DB.select_settings()
+    if shortstart:
+        await dilogcomm.printlog(bot=bot, message='bot online')
+        return
     await dilogcomm.printlog(bot=bot,
                              message='обнаружено время последней записи: {0}'.format(params.shutdownparams['time']))
     time: datetime = datetime.strptime(params.shutdownparams['time'], "%Y-%m-%d %H:%M:%S")
@@ -67,9 +70,12 @@ async def on_reaction_add(react: discord.Reaction, user):
 async def tm(ctx: discord.ext.commands.Context):
     await ctx.message.delete()
     emb: discord.Embed = discord.Embed(title='ваш аватар')
-    emb.set_image(url=ctx.author.avatar_url)
+    emb.set_author(name='user', url=ctx.author.avatar_url)
+    emb.set_thumbnail(url=ctx.author.avatar_url)
+    emb.add_field(name='field1:', value='value1')
+    emb.add_field(name='field2:', value='value2')
+    emb.add_field(name='field3:', value='value3', inline=False)
     await ctx.send(embed=emb)
-
     # await simplecomm.hello(ctx)
 
 
@@ -164,16 +170,21 @@ async def fix_name(ctx: discord.ext.commands.Context):
     DB.update(stat=stat)
 
 
-# Показывает статистику указанного пользователя
-@bot.command()
+@bot.command(name='stats')
 async def stats(ctx: discord.ext.commands.Context):
     await dilogcomm.printlog(bot=bot, author=ctx.message.author,
                              message='вызвана команда -stats'.format(ctx.message.author.name))
     await ctx.message.delete()
-    emb_list = datacommm.user_stats_emb(ctx=ctx, DB=DB)
-    emb = discord.Embed(color=discord.colour.Color.dark_magenta(),
-                        title=emb_list[0], description=emb_list[1])
-    await ctx.send(embed=emb)
+    await ctx.send(embed=datacommm.user_stats_emb(ctx=ctx, DB=DB))
+
+
+# Показывает статистику указанного пользователя
+@bot.command(name='stats_old')
+async def stats2(ctx: discord.ext.commands.Context):
+    await dilogcomm.printlog(bot=bot, author=ctx.message.author,
+                             message='вызвана команда -stats_old'.format(ctx.message.author.name))
+    await ctx.message.delete()
+    await ctx.send(embed=datacommm.user_stats_emb2(ctx=ctx, DB=DB))
 
 
 # проверка, находится ли пользователь в сети

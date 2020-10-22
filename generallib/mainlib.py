@@ -28,13 +28,6 @@ def mylen(stroke: str):
     return counter
 
 
-# Выводит на печать дробное число
-def print_number(number: float, number_count):
-    main_part = int(number)
-    float_part = int(round((number - main_part) * pow(10, number_count), 1))
-    return '{0}.{1}'.format(main_part, float_part)
-
-
 # Конвертирует словарь в двумерный список
 def DictToList(userdict: dict):
     newlist = []
