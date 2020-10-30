@@ -54,10 +54,17 @@ class userstats(object):
         if vc_clear:
             self.vc_counter = 0
 
-    # Рассчитывает опыт пользователя
+    # обновляет статистику по сообщениям
+    def add_messages_stat(self, symbols: int, messages: int):
+        self.symb_counter += symbols
+        self.mes_counter += messages
+        self.exp += float(symbols + messages) / 10
+
+    # рассчитывает опыт пользователя
     def calculate_exp(self):
         self.exp = float(round(self.mes_counter / 10 + self.symb_counter / 10, 1))
 
+    # выводит на печать
     def to_string(self):
         return 'name: {0}\nID: {1}\n Exp: {2}\n MesCount {3}\n SymbCount: {4}\n VCTime: {5}s.'.format(self.name,
             self.id, self.exp, self.mes_counter, self.symb_counter, self.vc_counter)

@@ -36,6 +36,13 @@ class Test_UserStats(unittest.TestCase):
         self.assertEqual(0, self.us1.vc_counter,
                          'vc_counter should be 0 [clear(vc_clear=True)] actual ' + str(self.us1.vc_counter))
 
+    def test_add_messages_stat(self):
+        print('Testing structs.userstats.add_messages_stat()')
+        self.us1.add_messages_stat(symbols=30, messages=2)
+        self.assertEqual(40, self.us1.symb_counter, 'symb_counter mismatch')
+        self.assertEqual(3, self.us1.mes_counter, 'mes_counter mismatch')
+        self.assertEqual(5.2, self.us1.exp, 'exp mismatch')
+
     def test_calculate_exp(self):
         print('Testing structs.userstats.calculate_exp()')
         self.us1.calculate_exp()

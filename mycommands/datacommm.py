@@ -79,67 +79,50 @@ async def calc_stats_after_time(channel: discord.TextChannel, time):
     return StatList
 
 
-# Обновляет статистику пользователя по отправленному им сообщщению
+# Обновляет статистику пользователя по отправленному им сообщению (для списков)
 def stats_update_list(mes: discord.Message, StatsList: list):
     if mes.author.bot:
         return
     stat: userstats.userstats = userstats.searchid(ID=mes.author.id, List=StatsList)
     if stat is not None:
-        symbprint = mainlib.mylen(mes.content)
-        stat.symb_counter += symbprint
-        stat.mes_counter += 1
-        stat.exp += symbprint/10 + 0.1
+        stat.add_messages_stat(symbols=mainlib.mylen(mes.content), messages=1)
     else:
         newstat = userstats.userstats(ID=mes.author.id)
-        symbprint = mainlib.mylen(mes.content)
-        newstat.symb_counter += symbprint
-        newstat.mes_counter += 1
-        newstat.exp += symbprint / 10
+        newstat.add_messages_stat(symbols=mainlib.mylen(mes.content), messages=1)
         newstat.name = mes.author.name + str(mes.author.discriminator)
         StatsList.append(newstat)
 
 
-# Обновляет статистику пользователя по отправленному им сообщщению
+# Обновляет статистику пользователя по отправленному им сообщщению (для спец. класса-списка)
 def stats_update_userstatlist(mes: discord.Message, StatsList: userstatslist.UserStatsList):
     if mes.author.bot:
         return
     stat: userstats.userstats = StatsList.search_id(ID=mes.author.id)
     if stat is not None:
-        symbprint = mainlib.mylen(mes.content)
-        stat.symb_counter += symbprint
-        stat.mes_counter += 1
-        stat.exp += symbprint/10 + 0.1
+        stat.add_messages_stat(symbols=mainlib.mylen(mes.content), messages=1)
     else:
         newstat = userstats.userstats(ID=mes.author.id)
-        symbprint = mainlib.mylen(mes.content)
-        newstat.symb_counter += symbprint
-        newstat.mes_counter += 1
-        newstat.exp += symbprint / 10
+        newstat.add_messages_stat(symbols=mainlib.mylen(mes.content), messages=1)
         newstat.name = mes.author.name + str(mes.author.discriminator)
         StatsList.push(newstat)
 
 
-# Обновляет статистику пользователя по отправленному им сообщщению
+# Обновляет статистику пользователя по отправленному им сообщщению (для базы данных)
 def stats_update(mes: discord.Message, DB: sqlitedb.BotDataBase):
     if mes.author.bot:
         return
     stat: userstats.userstats = DB.select(mes.author.id)
     if stat is not None:
-        symbprint: float = mainlib.mylen(mes.content)
-        stat.symb_counter += symbprint
-        stat.mes_counter += 1
-        stat.exp += float(symbprint)/10 + 0.1
+        stat.add_messages_stat(symbols=mainlib.mylen(mes.content), messages=1)
         DB.update(stat=stat)
     else:
         newstat = userstats.userstats(ID=mes.author.id)
-        symbprint = mainlib.mylen(mes.content)
-        newstat.symb_counter += symbprint
-        newstat.mes_counter += 1
-        newstat.exp += symbprint / 10
+        newstat.add_messages_stat(symbols=mainlib.mylen(mes.content), messages=1)
         newstat.name = mes.author.name + str(mes.author.discriminator)
         DB.insert(stat=newstat)
 
 
+# обновляет статистику из гс
 async def voice_stats_update(bot, DB: sqlitedb.BotDataBase, member: discord.Member,
     Processing: userstatslist.UserStatsList, before: discord.VoiceState, after: discord.VoiceState):
     if before.channel is None:
@@ -158,6 +141,7 @@ async def voice_stats_update(bot, DB: sqlitedb.BotDataBase, member: discord.Memb
             await dilogcomm.printlog(bot=bot, message='{0} пробыл в гс {1}сек.'.format(member.name, vc_time_counter))
 
 
+# вычисляет статистику одного текстового канала
 async def calculate_txtchannel_stats(channel):
     newstat = userstatslist.UserStatsList()
     async for mes in channel.history(limit=10000, oldest_first=None):
@@ -165,7 +149,8 @@ async def calculate_txtchannel_stats(channel):
     return newstat
 
 
-async def calculate_all_txtchannel_stats(ctx):
+# вычисляет и статистику со всех текстовых каналов
+async def calculate_all_txtchannel_stats(ctx) -> userstatslist.UserStatsList:
     g = ctx.author.guild
     new_stats: userstatslist.UserStatsList = userstatslist.UserStatsList()
     counter: int = 0
@@ -176,6 +161,7 @@ async def calculate_all_txtchannel_stats(ctx):
     return new_stats
 
 
+# вычисляет и печатает статистику со всех текстовых каналов
 async def print_all_txtchannel_stats(ctx):
     stats = await calculate_all_txtchannel_stats(ctx=ctx)
     answer = 'статистика из всех каналов:\n'
@@ -184,6 +170,7 @@ async def print_all_txtchannel_stats(ctx):
     return answer
 
 
+# сливает два списка со статистикой в один
 def merge_stats(stats1, stats2):
     for stat in stats2:
         stat1 = userstats.searchid(stats1, stat.id)

@@ -17,7 +17,8 @@ guild: discord.Guild
 DB: sqlitedb.BotDataBase
 ProcessingUsers: userstatslist.UserStatsList
 settingslist = {}
-shortstart: bool = True
+shortstart: bool = False
+
 
 @bot.event
 async def on_ready():
@@ -69,14 +70,7 @@ async def on_reaction_add(react: discord.Reaction, user):
 @bot.command()
 async def tm(ctx: discord.ext.commands.Context):
     await ctx.message.delete()
-    emb: discord.Embed = discord.Embed(title='ваш аватар')
-    emb.set_author(name='user', url=ctx.author.avatar_url)
-    emb.set_thumbnail(url=ctx.author.avatar_url)
-    emb.add_field(name='field1:', value='value1')
-    emb.add_field(name='field2:', value='value2')
-    emb.add_field(name='field3:', value='value3', inline=False)
-    await ctx.send(embed=emb)
-    # await simplecomm.hello(ctx)
+    await simplecomm.hello(ctx)
 
 
 @bot.command(name='add_calc')
@@ -223,7 +217,7 @@ async def userscom_information(ctx: discord.ext.commands.Context):
 # Выдаёт информацию о коммандах
 @bot.command(name='moders')
 @commands.has_guild_permissions(manage_channels=True)
-async def userscom_information(ctx: discord.ext.commands.Context):
+async def moderscom_information(ctx: discord.ext.commands.Context):
     await dilogcomm.printlog(bot=bot, author=ctx.message.author,
                              message='вызвана команда -moders'.format(ctx.message.author.name))
     await ctx.send('```{0}```'.format(textfile.RadAll('data\info.txt') +
