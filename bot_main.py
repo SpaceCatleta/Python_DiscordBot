@@ -12,14 +12,23 @@ from mycommands import simplecomm, dilogcomm, moderationcomm, datacommm, setting
 
 # Так как мы указали префикс в settings, обращаемся к словарю с ключом prefix.
 bot = commands.Bot(command_prefix=con_config.settings['prefix'])
+# текущее голосование
 current_vote: dsVote.Vote = None
+# текущая гильдия
 guild: discord.Guild
+# объект-обёртка для взаимодействия с базой данных
 DB: sqlitedb.BotDataBase
 ProcessingUsers: userstatslist.UserStatsList
 settingslist = {}
-shortstart: bool = False
+# метка для быстрого пуска (для проведения тестов)
+short_start: bool = False
+# список id пользователей, чьи команды уже выполняются.
+exe_list = []
+# максимальное количество ликнов на сообщение
+max_links_per_message: int = 10
 
 
+# события при включении бота
 @bot.event
 async def on_ready():
     global guild, DB, settingslist, ProcessingUsers
@@ -28,9 +37,10 @@ async def on_ready():
     guild = bot.get_guild(con_config.settings['home_guild_id'])
     await params.init_dictinoraies()
     settingslist = DB.select_settings()
-    if shortstart:
+    if short_start:
         await dilogcomm.printlog(bot=bot, message='bot online')
         return
+    # дорассчёт статистики
     await dilogcomm.printlog(bot=bot,
                              message='обнаружено время последней записи: {0}'.format(params.shutdownparams['time']))
     time: datetime = datetime.strptime(params.shutdownparams['time'], "%Y-%m-%d %H:%M:%S")
@@ -38,11 +48,21 @@ async def on_ready():
     time.astimezone(tzoffset("UTC+{}".format(n), n * 60 * 60))
     await dilogcomm.printlog(bot=bot,
         message=await datacommm.calc_alltxtchannels_stats_after_time(guild=guild, time=time, DB=DB))
+    await update_write_time()
+    await dilogcomm.printlog(bot=bot, message=params.shutdownparams['time'])
     await dilogcomm.printlog(bot=bot, message='bot online')
 
 
 @bot.event
 async def on_message(mes: discord.Message):
+    link_count = mainlib.symbols_in_str(mes.content, '@')
+    if link_count > max_links_per_message:
+        await mes.delete()
+        await mes.channel.send('```удалено сообщение с недопустимым количеством упоминаний```')
+        log = 'канал: {0}, пользователь: {1}][удалено сообщение с недопустимым количеством упоминаний'.\
+            format(mes.author.name, mes.channel.name)
+        await dilogcomm.printlog(bot = bot, message=log)
+        return
     datacommm.stats_update(mes=mes, DB=DB)
     await bot.process_commands(message=mes)
 
@@ -164,10 +184,16 @@ async def fix_name(ctx: discord.ext.commands.Context):
     DB.update(stat=stat)
 
 
+@bot.command(name='stat')
+async def stat(ctx: discord.ext.commands.Context):
+    await stats(ctx=ctx)
+
+
 @bot.command(name='stats')
 async def stats(ctx: discord.ext.commands.Context):
     await dilogcomm.printlog(bot=bot, author=ctx.message.author,
-                             message='вызвана команда -stats'.format(ctx.message.author.name))
+                             message='вызвана команда -stats'.format(ctx.message.author.name),
+                             params=[ctx.message.content.replace('-',''), simplecomm.get_name_from_mention(ctx.message)])
     await ctx.message.delete()
     await ctx.send(embed=datacommm.user_stats_emb(ctx=ctx, DB=DB))
 
@@ -197,13 +223,21 @@ async def is_online(ctx: discord.ext.commands.Context):
 # спам линком в чате
 @bot.command()
 async def bomb(ctx: discord.ext.commands.Context):
+    mes, link = simplecomm.extract_links_from_params_list(ctx.message)
+    mes = ' '.join(mes[1:])
     await dilogcomm.printlog(bot=bot, author=ctx.message.author,
-                             message='вызвана команда -bomb'.format(ctx.message.author.name))
+                             message='вызвана команда -bomb'.format(ctx.message.author.name),
+                             params=['bomb', link , mes])
+    await ctx.message.delete()
+    if ctx.author.id in exe_list:
+        await ctx.send('```команда уже выполняется```')
+        return
+    exe_list.append(ctx.author.id)
     for role in ctx.author.roles:
         if role.name == params.accessparams['banfunc']:
             return
-    await ctx.message.delete()
-    await simplecomm.bomb(ctx)
+    await simplecomm.bomb(ctx=ctx, text=mes)
+    exe_list.pop(exe_list.index(ctx.author.id))
 
 
 # Выдаёт информацию о коммандах
@@ -392,6 +426,14 @@ async def sys_shutdown(ctx: discord.ext.commands.Context):
     await dilogcomm.printlog(bot=bot, message='bot offline')
     await bot.close()
 
+
+# обновляет время последней записи
+async def update_write_time(print_log: bool = True):
+    params.shutdownparams['time'] = datetime.strftime(datetime.utcnow(), "%Y-%m-%d %H:%M:%S")
+    textfile.WriteParams(params.shutdownparams, config.params['shutdown_info'], delsymb='=')
+    if print_log:
+        await dilogcomm.printlog(bot=bot, message='обновлено время последней записи {0} UTC+0:00'.
+                                 format(params.shutdownparams['time']))
 
 # Обращаемся к словарю settings с ключом token, для получения токена
 print('boot')

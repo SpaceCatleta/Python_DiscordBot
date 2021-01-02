@@ -57,3 +57,10 @@ def is_match(el_list: list, value):
         if value == element:
             return True
     return False
+
+def symbols_in_str(stroke: str, char: str):
+    counter = 0
+    for symbol in stroke:
+        if symbol == char:
+            counter += 1
+    return counter

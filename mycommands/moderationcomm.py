@@ -1,8 +1,9 @@
 import discord
 import asyncio
+
 from generallib import mainlib
 from structs import userstats
-from mycommands import dilogcomm
+from mycommands import dilogcomm, simplecomm
 from data import sqlitedb
 
 
@@ -36,7 +37,9 @@ async def deletemessages(bot, ctx: discord.ext.commands.Context, DB: sqlitedb.Bo
         if LIST[3] == '-exp':
             addlog = await DeleteExp(MesList=meslist, DB=DB)
     await TCH.delete_messages(meslist)
-    await dilogcomm.printlog(bot=bot, author=ctx.author, message='С канала "{0}"\
+    await dilogcomm.printlog(bot=bot, author=ctx.author,message='Вызвана команада удаления сообщений',
+        params=simplecomm.create_params_list_removing_links_to_str(ctx.message))
+    await dilogcomm.printlog(bot=bot, message='С канала "{0}"\
  удалено {1} сообщений {2}'.format(ctx.channel.name, str(n), addlog))
 
 
