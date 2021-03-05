@@ -57,19 +57,3 @@ class BotDataBase:
         stat2: userstats.userstats = self.select(stat.id)
         stat.add(stat2)
         self.update(stat)
-
-    def select_settings(self):
-        self.cursor.execute("SELECT *  FROM settings")
-        settinglist = self.cursor.fetchall()
-        settingdict = {}
-        for row in settinglist:
-            settingdict[row[0]] = row[1]
-        return settingdict
-
-    def update_setting(self, name: str, setting: str):
-            self.cursor.execute("""
-            UPDATE settings
-            SET setting='{0}'
-            WHERE name='{1}'
-            """.format(setting, name))
-            self.connect.commit()

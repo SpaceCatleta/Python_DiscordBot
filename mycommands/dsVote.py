@@ -106,7 +106,7 @@ class Vote(object):
     # Подсчёт голосов
     def CalculateVotes(self):
         for item in self.votes:
-            if mainlib.is_match(el_list=self.voted_users, value=item[0]):
+            if item[0] in self.voted_users:
                 continue
             else:
                 self.voted_users.append(item[0])

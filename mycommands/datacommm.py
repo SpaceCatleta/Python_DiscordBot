@@ -1,5 +1,6 @@
 import discord
 import time
+from processing import messages_proc
 from generallib import mainlib
 from structs import userstats, userstatslist
 from mycommands import dilogcomm
@@ -85,10 +86,10 @@ def stats_update_list(mes: discord.Message, StatsList: list):
         return
     stat: userstats.userstats = userstats.searchid(ID=mes.author.id, List=StatsList)
     if stat is not None:
-        stat.add_messages_stat(symbols=mainlib.mylen(mes.content), messages=1)
+        stat.add_messages_stat(symbols=messages_proc.text_len(mes.content), messages=1)
     else:
         newstat = userstats.userstats(ID=mes.author.id)
-        newstat.add_messages_stat(symbols=mainlib.mylen(mes.content), messages=1)
+        newstat.add_messages_stat(symbols=messages_proc.text_len(mes.content), messages=1)
         newstat.name = mes.author.name + str(mes.author.discriminator)
         StatsList.append(newstat)
 
@@ -99,10 +100,10 @@ def stats_update_userstatlist(mes: discord.Message, StatsList: userstatslist.Use
         return
     stat: userstats.userstats = StatsList.search_id(ID=mes.author.id)
     if stat is not None:
-        stat.add_messages_stat(symbols=mainlib.mylen(mes.content), messages=1)
+        stat.add_messages_stat(symbols=messages_proc.text_len(mes.content), messages=1)
     else:
         newstat = userstats.userstats(ID=mes.author.id)
-        newstat.add_messages_stat(symbols=mainlib.mylen(mes.content), messages=1)
+        newstat.add_messages_stat(symbols=messages_proc.text_len(mes.content), messages=1)
         newstat.name = mes.author.name + str(mes.author.discriminator)
         StatsList.push(newstat)
 
@@ -113,11 +114,11 @@ def stats_update(mes: discord.Message, DB: sqlitedb.BotDataBase):
         return
     stat: userstats.userstats = DB.select(mes.author.id)
     if stat is not None:
-        stat.add_messages_stat(symbols=mainlib.mylen(mes.content), messages=1)
+        stat.add_messages_stat(symbols=messages_proc.text_len(mes.content), messages=1)
         DB.update(stat=stat)
     else:
         newstat = userstats.userstats(ID=mes.author.id)
-        newstat.add_messages_stat(symbols=mainlib.mylen(mes.content), messages=1)
+        newstat.add_messages_stat(symbols=messages_proc.text_len(mes.content), messages=1)
         newstat.name = mes.author.name + str(mes.author.discriminator)
         DB.insert(stat=newstat)
 

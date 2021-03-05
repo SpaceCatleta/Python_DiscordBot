@@ -1,13 +1,15 @@
-import discord
+import discord, asyncio
+from system import configs_obj
+from processing import roles_proc, messages_proc
 from dateutil.tz import tzoffset
 from datetime import datetime
 from discord.ext import commands
 from usersettings import params
 from data import sqlitedb
 from configs import config, con_config
-from generallib import textfile, mainlib
+from generallib import textfile
 from structs import userstats, userstatslist
-from mycommands import simplecomm, dilogcomm, moderationcomm, datacommm, settingscomm, infocomm, dsVote
+from mycommands import simplecomm, dilogcomm, moderationcomm, datacommm, infocomm, dsVote
 
 
 # Так как мы указали префикс в settings, обращаемся к словарю с ключом prefix.
@@ -19,24 +21,37 @@ guild: discord.Guild
 # объект-обёртка для взаимодействия с базой данных
 DB: sqlitedb.BotDataBase
 ProcessingUsers: userstatslist.UserStatsList
-settingslist = {}
 # метка для быстрого пуска (для проведения тестов)
 short_start: bool = False
 # список id пользователей, чьи команды уже выполняются.
 exe_list = []
-# максимальное количество ликнов на сообщение
-max_links_per_message: int = 10
+# хранит системные настройки и обеспечивает работу с файлом настроек
+gen_configs: configs_obj.GeneralConfig
+# хранит настройки ролей и обеспечивает работу с файлом настроек
+roles_configs: configs_obj.RolesConfig
+# запущен ли бот
+sys_boot : bool = True
 
+is_crashed: bool = False
+is_calculating: bool = False
+timeouts: int = 0
+
+
+# ======================================================================================================================
+# ===== СОБЫТИЯ =====
+# ======================================================================================================================
 
 # события при включении бота
 @bot.event
 async def on_ready():
-    global guild, DB, settingslist, ProcessingUsers
+    global guild, DB, ProcessingUsers, gen_configs, roles_configs
     ProcessingUsers = userstatslist.UserStatsList()
     DB = sqlitedb.BotDataBase('botdata.db')
     guild = bot.get_guild(con_config.settings['home_guild_id'])
+    gen_configs = configs_obj.GeneralConfig()
+    dilogcomm.gen_configs = gen_configs
+    roles_configs = configs_obj.RolesConfig()
     await params.init_dictinoraies()
-    settingslist = DB.select_settings()
     if short_start:
         await dilogcomm.printlog(bot=bot, message='bot online')
         return
@@ -50,27 +65,31 @@ async def on_ready():
         message=await datacommm.calc_alltxtchannels_stats_after_time(guild=guild, time=time, DB=DB))
     await update_write_time()
     await dilogcomm.printlog(bot=bot, message=params.shutdownparams['time'])
+    await update_data_loop()
     await dilogcomm.printlog(bot=bot, message='bot online')
 
 
 @bot.event
 async def on_message(mes: discord.Message):
-    link_count = mainlib.symbols_in_str(mes.content, '@')
-    if link_count > max_links_per_message:
+    link_count = messages_proc.symbols_in_text(mes.content, '@')
+    if link_count > gen_configs.max_links:
         await mes.delete()
         await mes.channel.send('```удалено сообщение с недопустимым количеством упоминаний```')
         log = 'канал: {0}, пользователь: {1}][удалено сообщение с недопустимым количеством упоминаний'.\
             format(mes.author.name, mes.channel.name)
-        await dilogcomm.printlog(bot = bot, message=log)
+        await dilogcomm.printlog(bot=bot, message=log)
         return
     datacommm.stats_update(mes=mes, DB=DB)
-    await bot.process_commands(message=mes)
+    try:
+        await asyncio.wait_for(bot.process_commands(message=mes), timeout=gen_configs.timeout)
+    except asyncio.TimeoutError:
+        await mes.channel.send('```timeout```')
 
 
 @bot.event
 async def on_member_join(member):
     DB.insert(userstats.userstats(ID=member.id, Name=member.name))
-    await member.add_roles(mainlib.Findrole(rolelist=guild.roles, serchrole=settingslist['base_role']))
+    await member.add_roles(roles_proc.find_role(rolelist=guild.roles, serchrole=roles_configs.base_role))
 
 
 @bot.event
@@ -84,6 +103,84 @@ async def on_reaction_add(react: discord.Reaction, user):
     if current_vote is None:
         return
     current_vote.add_vote(emoji=react, user=user)
+
+
+# ======================================================================================================================
+# ===== СИСТЕМНЫЕ ФУНКЦИИ =====
+# ======================================================================================================================
+
+
+# Выполнение команды со всеми проверками
+async def correct_boot(fun, ctx, is_high_prior: bool = False, is_calc_func: bool = False, *words):
+    global is_calculating, is_crashed
+    if not is_high_prior:
+        if is_crashed:
+            print('выполнение комманд временно заблокированно')
+            return
+        elif is_calculating:
+            print('выполняются вычисления')
+            return
+
+    await ctx.message.delete()
+    func_name = str(fun).split(' ')[1]
+    author = ctx.message.author
+    await dilogcomm.printlog(bot=bot, author=author,
+                             message='вызвана функция -{0}'.format(func_name),
+                             params=words)
+
+    is_calculating = True if is_calc_func else is_calculating
+    try:
+        if await fun(ctx, words) == -2:       # <------------------------------ Вызов функции тут
+            await dilogcomm.printlog(bot=bot, author=author,
+                                     message='выполнение функции {0} прервано'.format(func_name))
+    except asyncio.TimeoutError:
+        is_calculating = False if is_calc_func else is_calculating
+        await timeout_check()
+    is_calculating = False if is_calc_func else is_calculating
+
+
+# Отслеживание таймаутов
+async def timeout_check():
+    global timeouts, is_crashed
+    timeouts += 1
+    if timeouts >= gen_configs.timeout_limit:
+        is_crashed = True
+        timeouts = 0
+        await dilogcomm.printlog(bot=bot, message='произошла перегрузка, функции заблокированны на {0}с.'.
+                                 format(gen_configs.timeout))
+        await asyncio.sleep(gen_configs.timeout)
+        is_crashed = False
+
+
+# Проверка корректного вызова
+@bot.command()
+async def test(ctx: discord.ext.commands.Context, *words):
+    await correct_boot(tf, ctx, False, False, words)
+
+
+async def tf(ctx, *words):
+    print(words[0])
+    await ctx.send('success')
+
+
+# Тест системных собщений
+@bot.command()
+async def stest(ctx: discord.ext.commands.Context):
+    await dilogcomm.bomb_message(ctx=ctx, message='test')
+
+
+# ======================================================================================================================
+# ===== КОМАНДЫ =====
+# ======================================================================================================================
+
+
+# Блокировка комманд
+@bot.command()
+async def block(ctx):
+    await ctx.message.delete()
+    global is_calculating
+    is_calculating = not is_calculating
+    await ctx.send(str(is_calculating))
 
 
 # Тестовое сообщение от бота
@@ -131,6 +228,133 @@ async def txtchannels(ctx: discord.ext.commands.Context):
     await ctx.send(answer)
 
 
+# Считает статистику
+@bot.command()
+async def calc(ctx: discord.ext.commands.Context, *words):
+    await correct_boot(_calc, ctx, False, True, words)
+
+
+async def _calc(ctx: discord.ext.commands.Context, *words):
+    newstat: userstatslist.UserStatsList = await datacommm.calculate_txtchannel_stats(ctx.channel)
+    answer = ''
+    for curr_stat in newstat:
+        answer += '{0} напечатал {1} символов\n'.format(curr_stat.name, curr_stat.symb_counter)
+    await ctx.send('```{0}```'.format(answer))
+
+
+# Считает всю статистику
+@bot.command()
+@commands.has_guild_permissions(administrator=True)
+async def calc_all(ctx: discord.ext.commands.Context, *words):
+    await correct_boot(_calc_all, ctx, False, True, words)
+
+
+async def _calc_all(ctx: discord.ext.commands.Context, *words):
+    await ctx.send('```{0}```'.format(await datacommm.print_all_txtchannel_stats(ctx=ctx)))
+
+
+
+@bot.command(name='print')
+async def printer(ctx: discord.ext.commands.Context):
+    await ctx.message.delete()
+    print(str(ctx.message.content))
+
+
+# ======================================================================================================================
+# ОБЩИЕ КОМАНДЫ
+# ======================================================================================================================
+
+
+# Показывает статистику указанного пользователя
+@bot.command(name='stat')
+async def stat(ctx: discord.ext.commands.Context, *words):
+    await stats(ctx, words)
+
+
+# Показывает статистику указанного пользователя
+@bot.command(name='stats')
+async def stats(ctx: discord.ext.commands.Context, *words):
+    await correct_boot(_stats, ctx, False, False, words)
+
+
+async def _stats(ctx: discord.ext.commands.Context, *words):
+    await ctx.send(embed=datacommm.user_stats_emb(ctx=ctx, DB=DB))
+
+
+# Показывает статистику указанного пользователя (старый вариант)
+@bot.command(name='stats_old')
+async def stats2(ctx: discord.ext.commands.Context, *words):
+    await correct_boot(_stats2, ctx, False, False, words)
+
+
+async def _stats2(ctx: discord.ext.commands.Context, *words):
+    await ctx.send(embed=datacommm.user_stats_emb2(ctx=ctx, DB=DB))
+
+
+# Исправляет имя пользователя
+@bot.command(name='fixname')
+async def fix_name(ctx: discord.ext.commands.Context, *words):
+    await correct_boot(_fix_name, ctx, False, False, words)
+
+
+async def _fix_name(ctx: discord.ext.commands.Context, *words):
+    stat: userstats.userstats = DB.select(ctx.message.author.id)
+    stat.name = ctx.message.author.name + '#' + str(ctx.message.author.discriminator)
+    DB.update(stat=stat)
+
+
+# Выдаёт информацию о коммандах
+@bot.command(name='помощь')
+async def help_info(ctx: discord.ext.commands.Context, *words):
+    await correct_boot(_help_info, ctx, False, True, words)
+
+
+async def _help_info(ctx: discord.ext.commands.Context, *words):
+    await ctx.send('```{0}```'.format(textfile.RadAll(config.params['info'])))
+
+# Выдаёт информацию о коммандах (+комманды модераторов)
+@bot.command(name='moders')
+@commands.has_guild_permissions(manage_channels=True)
+async def moder_info(ctx: discord.ext.commands.Context, *words):
+    await correct_boot(_moder_info, ctx, False, True, words)
+
+
+async def _moder_info(ctx: discord.ext.commands.Context, *words):
+    await ctx.send('```{0}\n{1}```'.format(textfile.RadAll('data\info.txt'), textfile.RadAll('data\info_moders.txt')))
+
+
+# ======================================================================================================================
+# ФУНКЦИИ
+# ======================================================================================================================
+
+
+# спам линком в чате
+@bot.command()
+async def bomb(ctx: discord.ext.commands.Context, *words):
+    await correct_boot(_bomb, ctx, False, False, words)
+
+
+async def _bomb(ctx: discord.ext.commands.Context, *words):
+    ans = None
+    mes, link = simplecomm.extract_links_from_params_list(ctx.message)
+    mes = ' '.join(mes[1:])
+    await dilogcomm.printlog(bot=bot, author=ctx.message.author,
+                             message='вызвана команда -bomb'.format(ctx.message.author.name),
+                             params=['bomb', link, mes])
+    if ctx.author.id in exe_list:
+        await ctx.send('```команда уже выполняется```')
+        return
+    exe_list.append(ctx.author.id)
+
+    if roles_proc.is_exist(rolelist=ctx.author.roles, serchrole=roles_configs.ban_functions):
+        return
+
+    if await simplecomm.bomb(ctx=ctx, text=mes) == -2:
+        ans = -2
+    exe_list.pop(exe_list.index(ctx.author.id))
+    return ans
+
+
 # Начинает голосование
 @bot.command(name='vote')
 async def boot_vote(ctx: discord.ext.commands.Context):
@@ -147,121 +371,12 @@ async def boot_vote(ctx: discord.ext.commands.Context):
     current_vote = None
 
 
-@bot.command()
-async def calc(ctx: discord.ext.commands.Context):
-    await dilogcomm.printlog(bot=bot, author=ctx.message.author,
-                             message='вызвана команда -calc'.format(ctx.message.author.name))
-    await ctx.message.delete()
-    newstat: userstatslist.UserStatsList = await datacommm.calculate_txtchannel_stats(ctx.channel)
-    answer = ''
-    for stat in newstat:
-        answer += '{0} напечатал {1} символов\n'.format(stat.name, stat.symb_counter)
-    await ctx.send('```{0}```'.format(answer))
+# ======================================================================================================================
+# ГРУППА ИНФОРМАЦИОННЫХ КОМАНД
+# ======================================================================================================================
 
 
-@bot.command()
-@commands.has_guild_permissions(administrator=True)
-async def calc_all(ctx: discord.ext.commands.Context):
-    await dilogcomm.printlog(bot=bot, author=ctx.message.author,
-                             message='вызвана команда -calc_all'.format(ctx.message.author.name))
-    await ctx.message.delete()
-    await ctx.send('```{0}```'.format(await datacommm.print_all_txtchannel_stats(ctx=ctx)))
-
-
-@bot.command(name='print')
-async def printer(ctx: discord.ext.commands.Context):
-    await ctx.message.delete()
-    print(str(ctx.message.content))
-
-
-@bot.command(name='fixname')
-async def fix_name(ctx: discord.ext.commands.Context):
-    await dilogcomm.printlog(bot=bot, author=ctx.message.author,
-                             message='вызвана команда -fixname'.format(ctx.message.author.name))
-    await ctx.message.delete()
-    stat: userstats.userstats = DB.select(ctx.message.author.id)
-    stat.name = ctx.message.author.name + '#' + str(ctx.message.author.discriminator)
-    DB.update(stat=stat)
-
-
-@bot.command(name='stat')
-async def stat(ctx: discord.ext.commands.Context):
-    await stats(ctx=ctx)
-
-
-@bot.command(name='stats')
-async def stats(ctx: discord.ext.commands.Context):
-    await dilogcomm.printlog(bot=bot, author=ctx.message.author,
-                             message='вызвана команда -stats'.format(ctx.message.author.name),
-                             params=[ctx.message.content.replace('-',''), simplecomm.get_name_from_mention(ctx.message)])
-    await ctx.message.delete()
-    await ctx.send(embed=datacommm.user_stats_emb(ctx=ctx, DB=DB))
-
-
-# Показывает статистику указанного пользователя
-@bot.command(name='stats_old')
-async def stats2(ctx: discord.ext.commands.Context):
-    await dilogcomm.printlog(bot=bot, author=ctx.message.author,
-                             message='вызвана команда -stats_old'.format(ctx.message.author.name))
-    await ctx.message.delete()
-    await ctx.send(embed=datacommm.user_stats_emb2(ctx=ctx, DB=DB))
-
-
-# проверка, находится ли пользователь в сети
-@bot.command(name='online')
-async def is_online(ctx: discord.ext.commands.Context):
-    await dilogcomm.printlog(bot=bot, author=ctx.message.author,
-                             message='вызвана команда -online'.format(ctx.message.author.name))
-    await ctx.message.delete()
-    user: discord.abc.User = ctx.message.mentions[0] if len(ctx.message.mentions) > 0 else ctx.author
-    if user.status != discord.Status.offline:
-        await ctx.send('пользователь {0} сейчас в сети'.format(user.name))
-    else:
-        await ctx.send('пользователь {0} сейчас не в сети'.format(user.name))
-
-
-# спам линком в чате
-@bot.command()
-async def bomb(ctx: discord.ext.commands.Context):
-    mes, link = simplecomm.extract_links_from_params_list(ctx.message)
-    mes = ' '.join(mes[1:])
-    await dilogcomm.printlog(bot=bot, author=ctx.message.author,
-                             message='вызвана команда -bomb'.format(ctx.message.author.name),
-                             params=['bomb', link , mes])
-    await ctx.message.delete()
-    if ctx.author.id in exe_list:
-        await ctx.send('```команда уже выполняется```')
-        return
-    exe_list.append(ctx.author.id)
-    for role in ctx.author.roles:
-        if role.name == params.accessparams['banfunc']:
-            return
-    await simplecomm.bomb(ctx=ctx, text=mes)
-    exe_list.pop(exe_list.index(ctx.author.id))
-
-
-# Выдаёт информацию о коммандах
-@bot.command(name='помощь')
-async def userscom_information(ctx: discord.ext.commands.Context):
-    await dilogcomm.printlog(bot=bot, author=ctx.message.author,
-                             message='вызвана команда -помошь'.format(ctx.message.author.name))
-    await ctx.send('```{0}```'.format(textfile.RadAll(config.params['info'])))
-
-
-# Выдаёт информацию о коммандах
-@bot.command(name='moders')
-@commands.has_guild_permissions(manage_channels=True)
-async def moderscom_information(ctx: discord.ext.commands.Context):
-    await dilogcomm.printlog(bot=bot, author=ctx.message.author,
-                             message='вызвана команда -moders'.format(ctx.message.author.name))
-    await ctx.send('```{0}```'.format(textfile.RadAll('data\info.txt') +
-                                      '\n' + textfile.RadAll('data\info_moders.txt')))
-
-
-# ГРУППА
-
-
-# Группа информационных команд
+# Общая функция группы
 @bot.group(nane='info')
 async def info(ctx: discord.ext.commands.Context):
     await ctx.message.delete()
@@ -291,34 +406,46 @@ async def count(ctx: discord.ext.commands.Context):
     await ctx.send('```{0}```'.format(await infocomm.count_channel_messages(bot=bot, ctx=ctx)))
 
 
-# ГРУППА
+# ======================================================================================================================
+# ГРУППА КОМАНД МОДЕРАЦИИ
+# ======================================================================================================================
 
 
-# Группа команд для модерации
+# Общая функция группы
 @bot.group(nane='mod')
 @commands.has_guild_permissions(manage_channels=True)
 async def mod(ctx: discord.ext.commands.Context):
     await ctx.message.delete()
 
 
+# Останавливает выполнение комманд
+@mod.command(name='stop')
+async def commands_stop(ctx: discord.ext.commands.Context):
+    await dilogcomm.printlog(bot=bot, author=ctx.author,
+                             message='вызвана комманда stop]\n[выполение активных комманд будет прервано')
+    simplecomm.stop_exe = True
+    await asyncio.sleep(20)
+    simplecomm.stop_exe = False
+
+
 # Утсанавливает роль для мута
 @mod.command(name='moot')
 async def give_moot(ctx: discord.ext.commands.Context):
-    await moderationcomm.give_timer_role(bot=bot, ctx=ctx, RoleList=guild.roles, rolename=settingslist['moot'])
+    await moderationcomm.give_timer_role(bot=bot, ctx=ctx, RoleList=guild.roles, rolename=roles_configs.moot)
 
 
 # Утсанавливает роль для войс мута
 @mod.command(name='voicemoot')
 async def give_voice_moot(ctx: discord.ext.commands.Context):
     await moderationcomm.\
-        give_timer_role(bot=bot, ctx=ctx, RoleList=guild.roles, rolename=settingslist['vc_moot'])
+        give_timer_role(bot=bot, ctx=ctx, RoleList=guild.roles, rolename=roles_configs.vc_moot)
 
 
 # Утсанавливает роль с ограниченныи функциями
 @mod.command(name='banfunc')
 async def give_ban_func(ctx: discord.ext.commands.Context):
     await moderationcomm.\
-        give_timer_role(bot=bot, ctx=ctx, RoleList=guild.roles, rolename=settingslist['ban_functions'])
+        give_timer_role(bot=bot, ctx=ctx, RoleList=guild.roles, rolename=roles_configs.ban_functions)
 
 
 # Удаление сообщений
@@ -327,44 +454,57 @@ async def clearmes(ctx: discord.ext.commands.Context):
     await moderationcomm.deletemessages(bot, ctx=ctx, DB=DB)
 
 
-# ГРУППА
+# ======================================================================================================================
+# ГРУППА КОМАНД НАСТРОЕК
+# ======================================================================================================================
 
 
-# Группа коанд для настроек
+# Общая функция группы
 @bot.group(nane='set')
 @commands.has_guild_permissions(manage_channels=True)
 async def set(ctx: discord.ext.commands.Context):
     await ctx.message.delete()
 
 
-# Утсанавливает роль с ограниченныи функциями
-@set.command(name='banfunc')
-async def set_ban_func_role(ctx: discord.ext.commands.Context):
-    await settingscomm.set_Access_role(bot=bot, DB=DB, accessname='ban_functions', ctx=ctx)
+# Показывает настройки
+@set.command(name='show')
+async def show_configs(ctx: discord.ext.commands.Context):
+    await dilogcomm.printlog(bot=bot, author=ctx.author, message='вызвана комманда -set show')
+    await ctx.send('```general:\n{0}\nroles:\n{1}```'.format(gen_configs.print(), roles_configs.print()))
 
 
-# Утсанавливает роль с ограниченныи функциями
-@set.command(name='moot')
-async def set_moot_role(ctx: discord.ext.commands.Context):
-    await settingscomm.set_Access_role(bot=bot, DB=DB, accessname='moot', ctx=ctx)
+# меняет основные настройки
+@set.command(name='general')
+async def set_general(ctx: discord.ext.commands.Context, *words):
+    if gen_configs.set_by_key(key=words[0], value=int(words[1])) == 0:
+        await dilogcomm.printlog(bot=bot, author=ctx.author, message='настройка {0} изменена на {1}'.
+                                 format(words[0], words[1]))
+        await dilogcomm.bomb_message(ctx=ctx, message='настройка {0} изменена на {1}'.format(words[0], words[1]))
+    else:
+        await dilogcomm.bomb_message(ctx=ctx, message='введено неверное название праметра', type='error')
 
 
-# Утсанавливает роль с ограниченныи функциями
-@set.command(name='vcmoot')
-async def set_voice_moot_role(ctx: discord.ext.commands.Context):
-    await settingscomm.set_Access_role(bot=bot, DB=DB, accessname='vc_moot', ctx=ctx)
+# меняет настройки ролей
+@set.command(name='roles')
+async def set_roles(ctx: discord.ext.commands.Context, *words):
+    value = ' '.join(words[1:])
+    if roles_proc.is_exist(rolelist=guild.roles, serchrole=value):
+        if roles_configs.set_by_key(key=words[0], value=value) == 0:
+            await dilogcomm.printlog(bot=bot, author=ctx.author, message='настройка {0} изменена на {1}'.
+                                     format(words[0], words[1]))
+            await dilogcomm.bomb_message(ctx=ctx, message='настройка {0} изменена на {1}'.format(words[0], words[1]))
+        else:
+            await dilogcomm.bomb_message(ctx=ctx, message='введено неверное название праметра', type='error')
+    else:
+        await dilogcomm.bomb_message(ctx=ctx, message='указанная роль не существует', type='error')
 
 
-# Утсанавливает роль с ограниченныи функциями
-@set.command(name='baserole')
-async def set_base_role(ctx: discord.ext.commands.Context):
-    await settingscomm.set_Access_role(bot=bot, DB=DB, accessname='base_role', ctx=ctx)
+# ======================================================================================================================
+# ГРУППА СИСТЕМНЫХ КОММАНД
+# ======================================================================================================================
 
 
-# ГРУППА
-
-
-# Группа систеных комманд
+# Общая функция группы
 @bot.group(nane='sys')
 @commands.has_guild_permissions(manage_channels=True)
 async def sys(ctx: discord.ext.commands.Context):
@@ -374,11 +514,13 @@ async def sys(ctx: discord.ext.commands.Context):
 # Перерассчитывает статистику по сообщениям на сервере
 @sys.command(name='recalc_stats')
 @commands.has_guild_permissions(administrator=True)
-async def sys_recalc_all(ctx: discord.ext.commands.Context):
-    await dilogcomm.printlog(bot=bot, author=ctx.message.author,
-                             message='вызвана команда -recalc_stats'.format(ctx.message.author.name))
+async def sys_recalc_all(ctx: discord.ext.commands.Context, *words):
+    await correct_boot(_sys_recalc_all, ctx, False, True, words)
+
+
+async def _sys_recalc_all(ctx: discord.ext.commands.Context, *words):
     global DB
-    g = ctx.author.guild
+    new_stats = []
     new_stats: await datacommm.calculate_all_txtchannel_stats(ctx=ctx)
     old_stat: userstats.userstats
     for stat in new_stats:
@@ -391,27 +533,28 @@ async def sys_recalc_all(ctx: discord.ext.commands.Context):
             old_stat.calculate_exp()
             DB.update(old_stat)
     answer = 'произведён перерасчёт статистики\nстатистика из всех каналов:\n'
-    for stat in new_stats:
-        answer += '{0} напечатал {1} символов\n'.format(stat.name, stat.symb_counter)
+    for curr_stat in new_stats:
+        answer += '{0} напечатал {1} символов\n'.format(curr_stat.name, curr_stat.symb_counter)
     await dilogcomm.printlog(bot=bot, message=answer)
 
 
 # Перерассчитывает опыт и перезаписывает имена всех пользователей
-@sys.command(name='fixstats')
-async def fixstats(ctx: discord.ext.commands.Context):
-    await dilogcomm.printlog(bot=bot, author=ctx.message.author,
-                             message='вызвана команда -fixstats'.format(ctx.message.author.name))
+@sys.command(name='fix_stats')
+async def fix_stats(ctx: discord.ext.commands.Context, *words):
+    await correct_boot(_sys_recalc_all, ctx, False, True, words)
+
+
+async def _fix_stats(ctx: discord.ext.commands.Context, *words):
     global DB
-    g = ctx.author.guild
-    stats: userstats.userstats
+    curr_stats: userstats.userstats
     for member in ctx.author.guild.members:
-        stats = DB.select(member.id)
-        if stats is None:
+        curr_stats = DB.select(member.id)
+        if curr_stats is None:
             DB.insert(userstats.userstats(ID=member.id, Name=member.name))
         else:
-            stats.calculate_exp()
-            stats.name = member.name
-            DB.update(stat=stats)
+            curr_stats.calculate_exp()
+            curr_stats.name = member.name
+            DB.update(stat=curr_stats)
     await dilogcomm.printlog(bot=bot,
                              message='статистика опыта и имена пользователей обновлены'.format(ctx.message.author.name))
 
@@ -419,12 +562,20 @@ async def fixstats(ctx: discord.ext.commands.Context):
 # команда завершения работы
 @sys.command(name='off')
 async def sys_shutdown(ctx: discord.ext.commands.Context):
-    params.shutdownparams['time'] = datetime.strftime(datetime.utcnow(), "%Y-%m-%d %H:%M:%S")
-    textfile.WriteParams(params.shutdownparams, config.params['shutdown_info'], delsymb='=')
+    global sys_boot
+    await update_write_time()
     await dilogcomm.printlog(bot=bot, author=ctx.message.author,
                              message='инициировано выключение'.format(ctx.message.author.name))
     await dilogcomm.printlog(bot=bot, message='bot offline')
+    sys_boot = False
     await bot.close()
+
+
+async def update_data_loop():
+    while sys_boot:
+        print('time written')
+        await update_write_time(print_log=False)
+        await asyncio.sleep(gen_configs.time_update_delay)
 
 
 # обновляет время последней записи
@@ -434,6 +585,7 @@ async def update_write_time(print_log: bool = True):
     if print_log:
         await dilogcomm.printlog(bot=bot, message='обновлено время последней записи {0} UTC+0:00'.
                                  format(params.shutdownparams['time']))
+
 
 # Обращаемся к словарю settings с ключом token, для получения токена
 print('boot')

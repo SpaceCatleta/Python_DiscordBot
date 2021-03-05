@@ -1,5 +1,7 @@
 import discord
+from mycommands import dilogcomm
 
+stop_exe: bool = False
 
 # спам линком в чате
 async def bomb(ctx: discord.ext.commands.Context, text: str = ''):
@@ -11,7 +13,11 @@ async def bomb(ctx: discord.ext.commands.Context, text: str = ''):
     else:
         return
     for i in range(1, 11):
+        if stop_exe == True:
+            await ctx.send('```выполнение прервано```')
+            return -2
         await ctx.send('[{0}] '.format(i) + link.mention + ' ' + text)
+    return 0
 
 # находит упоминание в сообщении и вовзращает его ник
 def get_name_from_mention(message):

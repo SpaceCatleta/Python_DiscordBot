@@ -1,7 +1,7 @@
 import discord
 import asyncio
 
-from generallib import mainlib
+from processing import roles_proc, messages_proc
 from structs import userstats
 from mycommands import dilogcomm, simplecomm
 from data import sqlitedb
@@ -59,7 +59,7 @@ async def DeleteExp(MesList, DB: sqlitedb.BotDataBase):
             user.name = mes.author.name
             authorsdata.append(user)
         # Вычисление и запись поинжаемых статистик
-        symb_counter = mainlib.mylen(mes.content)
+        symb_counter = messages_proc.text_len(mes.content)
         user.symb_counter -= symb_counter
         user.exp -= symb_counter / 10
         user.mes_counter -= 1
@@ -76,7 +76,7 @@ async def DeleteExp(MesList, DB: sqlitedb.BotDataBase):
 async def give_timer_role(bot, ctx: discord.ext.commands.Context, RoleList: list, rolename: str):
     if len(ctx.message.mentions) == 0:
         return -1
-    mootrole = mainlib.Findrole(rolelist=RoleList, serchrole=rolename)
+    mootrole = roles_proc.find_role(rolelist=RoleList, serchrole=rolename)
     user: discord.Member = ctx.message.mentions[0]
     arglist = ctx.message.content.split(' ')
     n = 600 if len(arglist) < 3 else int(arglist[2])
