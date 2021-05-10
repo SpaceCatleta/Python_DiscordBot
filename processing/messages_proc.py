@@ -23,6 +23,7 @@ def symbols_in_text(stroke: str, char: str):
             counter += 1
     return counter
 
+
 def get_rolename(ctx):
     if len(ctx.message.role_mentions) > 0:
         return ctx.message.role_mentions[0].name
@@ -31,3 +32,11 @@ def get_rolename(ctx):
         if len(arglist) > 2:
             return arglist[2]
     return None
+
+
+def is_gif(message):
+    length = len(message.content)
+    if message.content[0:8] == 'https://':
+        return True
+    else:
+        return False
