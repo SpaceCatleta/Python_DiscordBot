@@ -117,3 +117,10 @@ class GifTriggersDataBase:
                         WHERE group_name='{0}'""".format(ans.name))
         self.connect.commit()
         return 0
+
+
+    def delete_gif(self, group_name: str, url: str):
+        self.cursor.execute("""DELETE FROM gif
+                WHERE group_name='{0}'
+                AND gif='{1}'""".format(group_name, url))
+        self.connect.commit()

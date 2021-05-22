@@ -1,7 +1,6 @@
 import random
 import sqlite3
-import discord
-from generallib import textfile
+from configs import  runtime_settings
 import functions.gif_triggers_db_proc as TDB
 
 
@@ -14,14 +13,16 @@ def init(path: str):
     global triggers_db
     triggers_db = TDB.GifTriggersDataBase(path)
 
-def get_trigger_info(name: str):
+async def get_trigger_info(name: str, bot):
     ans = triggers_db.get_trigger(name=name)
     if ans == -1:
         return -1
     else:
         count = len(triggers_db.get_group_gif(name=ans.name))
+        username = await bot.fetch_user(int(ans.author_id))
         return 'триггер:{0}   фраза:{1}\nавтор:{2}   доступ всем:{3}\nкол-во gif:{4}'.\
-            format(ans.name, ans.discr, ans.author_id, 'yes' if ans.access else 'no', count)
+            format(ans.name, ans.discr, username, 'yes' if ans.access else 'no', count)
+
 
 def switch_lock(name: str):
     triggers_db.switch_lock(name=name)
@@ -66,6 +67,19 @@ def get_trigger_list():
 
 def get_random_gif(group_name: str):
     return random.choice(triggers_db.get_group_gif(name=group_name))[0]
+
+
+def get_gif_by_number(group_name: str, number: int):
+    return triggers_db.get_group_gif(name=group_name)[number][0]
+
+
+def remove_gif_by_number(group_name: str, number: int):
+    try:
+        url = get_gif_by_number(group_name=group_name, number=number)
+    except:
+        return -1
+    triggers_db.delete_gif(group_name=group_name, url=url)
+    return url
 
 
 def get_trigger(name: str):
