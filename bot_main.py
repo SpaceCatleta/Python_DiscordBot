@@ -16,7 +16,8 @@ from information import _shortcut
 
 
 # Так как мы указали префикс в settings, обращаемся к словарю с ключом prefix.
-bot = commands.Bot(command_prefix=con_config.settings['prefix'])
+intents = discord.Intents.all()
+bot = commands.Bot(command_prefix=con_config.settings['prefix'], intents=intents)
 # текущее голосование
 current_vote: dsVote.Vote = None
 # текущая гильдия
@@ -33,11 +34,12 @@ gen_configs: configs_obj.GeneralConfig
 # хранит настройки ролей и обеспечивает работу с файлом настроек
 roles_configs: configs_obj.RolesConfig
 # запущен ли бот
-sys_boot : bool = True
+sys_boot : bool = False
 
 is_crashed: bool = False
 is_calculating: bool = False
 timeouts: int = 0
+
 
 
 # ======================================================================================================================
@@ -93,8 +95,35 @@ async def on_message(mes: discord.Message):
 
 @bot.event
 async def on_member_join(member):
-    DB.insert(userstats.userstats(ID=member.id, Name=member.name))
-    await member.add_roles(roles_proc.find_role(rolelist=guild.roles, serchrole=roles_configs.base_role))
+    await dilogcomm.printlog(bot=bot, message="пользователь {0} зашёл на сервер {1}".
+                             format(member.display_name, member.guild.nane), color='green')
+    embed = discord.Embed(colour=discord.colour.Color.green())
+    embed.description = "Пользователь {0} присоединился к нам".format(member.display_name)
+    await member.guild.system_channel.send(embed=embed)
+
+
+@bot.event
+async def on_member_remove(member):
+    await dilogcomm.printlog(bot=bot, message="пользователь {0} покинул сервер {1}".
+                             format(member.display_name, member.guild.nane), color='red')
+    embed = discord.Embed(colour=discord.colour.Color.red())
+    embed.description = "Пользователь {0} покинул нас".format(member.display_name)
+    await member.guild.system_channel.send(embed=embed)
+
+
+@bot.event
+async def on_member_ban(guild, user):
+    await dilogcomm.printlog(bot=bot, message="пользователь {0} был забанен на сервере {1}".
+                             format(user.name, guild.name), color='red')
+    embed = discord.Embed(colour=discord.colour.Color.red())
+    embed.description = "Пользователь {0} был забанен".format(user.name)
+    await guild.system_channel.send(embed=embed)
+
+
+@bot.event
+async def on_member_unban(guild, user):
+    await dilogcomm.printlog(bot=bot, message="пользователь {0} был разбанен на сервере {1}".
+                             format(user.name, guild.name), color='green')
 
 
 @bot.event
@@ -205,29 +234,29 @@ async def t(ctx: discord.ext.commands.Context, *words):
 
     """-t [комманда] [ключевое слово] [параметры]"""
     if words[0] == 'help':          # ===== ПОМОЩЬ
-        await  dilogcomm.printlog(bot=bot, author=ctx.author, message='вызвал команду -t help')
+        await  dilogcomm.printlog(bot=bot, author=ctx.author, message='вызвал команду -t help', ctx=ctx)
         await ctx.send(textfile.RadAll('information/triggers_help.txt'))
 
     elif words[0] == 'list':        # ===== ЗАПРОС ДАННЫХ О ВСЁМ СПИСКЕ
-        await  dilogcomm.printlog(bot=bot, author=ctx.author, message='вызвал команду -t list')
+        await  dilogcomm.printlog(bot=bot, author=ctx.author, message='вызвал команду -t list', ctx=ctx)
         await ctx.send('```' + gif_triggers.get_trigger_list() + '```')
 
     elif words[0] == 'lock':        # ===== СМЕНА РЕЖИМА ДОСТУПА
-        await  dilogcomm.printlog(bot=bot, author=ctx.author, message='вызвал команду -t lock', params=words[1:])
+        await  dilogcomm.printlog(bot=bot, author=ctx.author, message='вызвал команду -t lock', params=words[1:], ctx=ctx)
         if gif_triggers.switch_lock(words[1]) == -1:
             await dilogcomm.bomb_message(ctx=ctx, message='неверное ключевое слово', type='error')
         else:
             await dilogcomm.bomb_message(ctx=ctx, message='доступ к триггеру {0} изменён'.format(words[1]))
 
     elif words[0] == 'edit':        # ===== СМЕНА ФРАЗЫ ТРИГГЕРА
-        await  dilogcomm.printlog(bot=bot, author=ctx.author, message='вызвал команду -t edit',params=words[1:])
+        await  dilogcomm.printlog(bot=bot, author=ctx.author, message='вызвал команду -t edit',params=words[1:], ctx=ctx)
         if gif_triggers.update_trigger_discr(name=words[1], new_discr=' '.join(words[2:])) == -1:
             await dilogcomm.bomb_message(ctx=ctx, message='неверное ключевое слово', type='error')
         else:
             await dilogcomm.bomb_message(ctx=ctx, message='фраза у триггера {0} изменена'.format(words[1]))
 
     elif words[0] == 'info':        # ===== ПОЛУЧЕНИЕ ИНФОРМАЦИИ О ТРИГГЕРЕ
-        await  dilogcomm.printlog(bot=bot, author=ctx.author, message='вызвал команду -t info')
+        await  dilogcomm.printlog(bot=bot, author=ctx.author, message='вызвал команду -t info', ctx=ctx)
         ans = await gif_triggers.get_trigger_info(name=words[1], bot=bot)
         if ans == -1:
             await dilogcomm.bomb_message(ctx=ctx, message='неверное ключевое слово', type='error')
@@ -235,14 +264,14 @@ async def t(ctx: discord.ext.commands.Context, *words):
             await ctx.send('```' + ans + '```')
 
     elif words[0] == 'delete':      # ===== УДАЛЕНИЕ
-        await  dilogcomm.printlog(bot=bot, author=ctx.author, message='вызвал команду -t delete', params=words[1:])
+        await  dilogcomm.printlog(bot=bot, author=ctx.author, message='вызвал команду -t delete', params=words[1:], ctx=ctx)
         if gif_triggers.delete_trigger(name=words[1]) == -1:
             await dilogcomm.bomb_message(ctx=ctx, message='неверное ключевое слово', type='error')
         else:
             await dilogcomm.bomb_message(ctx=ctx, message='триггер {0} удалён'.format(words[1]))
 
     elif words[0] == 'new':         # ===== ДОБАВЛЕНИЕ НОВОГО КЛЮЧЕВОГО СЛОВА
-        await  dilogcomm.printlog(bot=bot, author=ctx.author, message='вызвал команду -t new', params=words[1:])
+        await  dilogcomm.printlog(bot=bot, author=ctx.author, message='вызвал команду -t new', params=words[1:], ctx=ctx)
         if len(words) > 2:
             ans = gif_triggers.add_new_trigger(ctx.author.id, words[1].replace('_', ' ').lower(), ' '.join(words[2:]))
         else:
@@ -253,7 +282,7 @@ async def t(ctx: discord.ext.commands.Context, *words):
             await dilogcomm.bomb_message(ctx=ctx, message='данный триггер уже создан', type='error')
 
     elif words[0] == 'add':         # ===== ДОБАВЛЕНИЕ GIF
-        await  dilogcomm.printlog(bot=bot, author=ctx.author, message='вызвал команду -t add', params=words[1:])
+        await  dilogcomm.printlog(bot=bot, author=ctx.author, message='вызвал команду -t add', params=words[1:], ctx=ctx)
         URL_mes = await search_gif_mes(ctx=ctx)
         if URL_mes == None:
             await dilogcomm.bomb_message(ctx=ctx, message='в последних 10 сообщениях gif не обнаружены')
@@ -265,7 +294,7 @@ async def t(ctx: discord.ext.commands.Context, *words):
                 await dilogcomm.bomb_message(ctx=ctx, message=answer, type='error')
 
     elif words[0] == 'remove':      # ===== УДАЛЕНИЕ GIF
-        await  dilogcomm.printlog(bot=bot, author=ctx.author, message='вызвал команду -t remove', params=words[1:])
+        await  dilogcomm.printlog(bot=bot, author=ctx.author, message='вызвал команду -t remove', params=words[1:], ctx=ctx)
         trigger = gif_triggers.get_trigger(name=words[1])
         if trigger is not None and len(words) >= 3 and words[2].isdigit():
             ans = gif_triggers.remove_gif_by_number(group_name=trigger.name, number=int(words[2])-1)
@@ -278,7 +307,7 @@ async def t(ctx: discord.ext.commands.Context, *words):
             await dilogcomm.bomb_message(ctx=ctx, message='Ошибка в ключевом слове или номере gif', type='error')
 
     else:                           # ===== ВЫЗОВ GIF
-        await  dilogcomm.printlog(bot=bot, author=ctx.author, message='вызвал команду -t (вызов триггера)', params=words)
+        await  dilogcomm.printlog(bot=bot, author=ctx.author, message='вызвал команду -t (вызов триггера)', params=words, ctx=ctx)
         trigger = gif_triggers.get_trigger(name=words[0])
         if trigger is not None:
             if len(ctx.message.mentions) > 0:
@@ -306,12 +335,13 @@ async def search_gif_mes(ctx):
 
 
 # Блокировка комманд
-@bot.command()
-async def block(ctx):
-    await ctx.message.delete()
-    global is_calculating
-    is_calculating = not is_calculating
-    await ctx.send(str(is_calculating))
+# @bot.command()
+# @commands.has_guild_permissions(administrator=True)
+# async def block(ctx):
+#     await ctx.message.delete()
+#     global is_calculating
+#     is_calculating = not is_calculating
+#     await ctx.send(str(is_calculating))
 
 
 # Тестовое сообщение от бота
