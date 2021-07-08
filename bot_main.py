@@ -96,7 +96,7 @@ async def on_message(mes: discord.Message):
 @bot.event
 async def on_member_join(member):
     await dilogcomm.printlog(bot=bot, message="пользователь {0} зашёл на сервер {1}".
-                             format(member.display_name, member.guild.nane), color='green')
+                             format(member.display_name, member.guild.name), color='green')
     embed = discord.Embed(colour=discord.colour.Color.green())
     embed.description = "Пользователь {0} присоединился к нам".format(member.display_name)
     await member.guild.system_channel.send(embed=embed)
@@ -105,7 +105,7 @@ async def on_member_join(member):
 @bot.event
 async def on_member_remove(member):
     await dilogcomm.printlog(bot=bot, message="пользователь {0} покинул сервер {1}".
-                             format(member.display_name, member.guild.nane), color='red')
+                             format(member.display_name, member.guild.name), color='red')
     embed = discord.Embed(colour=discord.colour.Color.red())
     embed.description = "Пользователь {0} покинул нас".format(member.display_name)
     await member.guild.system_channel.send(embed=embed)
