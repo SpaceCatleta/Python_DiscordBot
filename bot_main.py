@@ -1,4 +1,4 @@
-import discord, asyncio, re
+import discord, asyncio
 from system import configs_obj
 from processing import roles_proc, messages_proc
 from dateutil.tz import tzoffset
@@ -189,10 +189,10 @@ async def timeout_check():
 # Проверка корректного вызова
 @bot.command()
 async def test(ctx: discord.ext.commands.Context, *words):
-    await correct_boot(tf, ctx, False, False, words)
+    await correct_boot(tm, ctx, False, False, words)
 
 @bot.command()
-async def tf(ctx, *words):
+async def tm(ctx, *words):
     text = '12 *3* 123'
     await ctx.send(text)
 
@@ -225,6 +225,13 @@ async def change_keyword(ctx: discord.ext.commands.Context):
         await dilogcomm.bomb_message(ctx=ctx, message='сообщение пользователя не найдено среди 10 последних')
     else:
         await ctx.send(answer)
+
+
+
+# Команда триггеров (дублёр)
+@bot.command(name='т')
+async def t_double(ctx: discord.ext.commands.Context, *words):
+    await t(ctx, *words)
 
 
 # Команда триггеров
@@ -344,13 +351,6 @@ async def search_gif_mes(ctx):
 #     await ctx.send(str(is_calculating))
 
 
-# Тестовое сообщение от бота
-@bot.command()
-async def tm(ctx: discord.ext.commands.Context):
-    await ctx.message.delete()
-    await simplecomm.hello(ctx)
-
-
 @bot.command(name='add_calc')
 @commands.has_guild_permissions(administrator=True)
 async def add_calc(ctx: discord.ext.commands.Context):
@@ -431,7 +431,7 @@ async def reader(ctx: discord.ext.commands.Context):
 # ======================================================================================================================
 
 
-# Показывает статистику указанного пользователя
+# Показывает статистику указанного пользователя (дублёр)
 @bot.command(name='stat')
 async def stat(ctx: discord.ext.commands.Context, *words):
     await stats(ctx, words)

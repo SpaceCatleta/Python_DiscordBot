@@ -61,9 +61,3 @@ def extract_links_from_params_list(message):
             answer.append(w)
 
     return answer, link
-
-
-# Тестовое приветствие
-async def hello(ctx):
-    await ctx.send('1001 101 11 100 1 0')
-

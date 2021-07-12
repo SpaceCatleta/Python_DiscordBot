@@ -1,7 +1,6 @@
 import discord
 import time
 from processing import messages_proc
-from generallib import mainlib
 from structs import userstats, userstatslist
 from mycommands import dilogcomm
 from data import sqlitedb
@@ -50,7 +49,7 @@ def user_stats_emb(ctx, DB: sqlitedb.BotDataBase) -> discord.Embed:
     emb.add_field(name='Опыт:', value=str(round(stat.exp, 1)) + '/99999')
     emb.add_field(name='Статистика:', value='Отправлено сообщений: {0}\nНапечатано символов: {1}\
     \nВремя в голосовых чатах:{2}'.format(stat.mes_counter, stat.symb_counter,
-        time.strftime("%H:%M:%S", time.gmtime(stat.vc_counter)).replace(' ', '')), inline=False)
+        time.strftime("%dд::%H:%M:%S", time.gmtime(stat.vc_counter)).replace(' ', '')), inline=False)
     return emb
 
 
