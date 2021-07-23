@@ -239,6 +239,10 @@ async def t_double(ctx: discord.ext.commands.Context, *words):
 async def t(ctx: discord.ext.commands.Context, *words):
     await ctx.message.delete()
 
+    if roles_proc.is_exist(rolelist=ctx.author.roles, serchrole=roles_configs.ban_functions):
+        await dilogcomm.bomb_message(ctx=ctx, message='Данная функция вам недоступна', type='error')
+        return
+
     """-t [комманда] [ключевое слово] [параметры]"""
     if words[0] == 'help':          # ===== ПОМОЩЬ
         await  dilogcomm.printlog(bot=bot, author=ctx.author, message='вызвал команду -t help', ctx=ctx)
@@ -517,14 +521,15 @@ async def _bomb(ctx: discord.ext.commands.Context, *words):
     await dilogcomm.printlog(bot=bot, author=ctx.message.author,
                              message='вызвана команда -bomb'.format(ctx.message.author.name),
                              params=['bomb', link, mes])
+
+    if roles_proc.is_exist(rolelist=ctx.author.roles, serchrole=roles_configs.ban_functions):
+        await dilogcomm.bomb_message(ctx=ctx, message='Данная функция вам недоступна', type='error')
+        return
+
     if ctx.author.id in exe_list:
         await ctx.send('```команда уже выполняется```')
         return
     exe_list.append(ctx.author.id)
-
-    if roles_proc.is_exist(rolelist=ctx.author.roles, serchrole=roles_configs.ban_functions):
-        return
-
     if await simplecomm.bomb(ctx=ctx, text=mes) == -2:
         ans = -2
     exe_list.pop(exe_list.index(ctx.author.id))
