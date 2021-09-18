@@ -79,13 +79,14 @@ async def on_message(mes: discord.Message):
         DBUser = UserService.get_user_by_id(userId=mes.author.id)
         DBUser.level = get_level_from_exp(exp=DBUser.exp)
         UserService.update_user(user=DBUser)
-        await _dialog.message.bomb_message2(mes=mes, text=f'{mes.author.name} '
-                                                          f'получил(а) новый уровень - {DBUser.Level}!', type='error')
+
         if DBUser.Level in DBGuilds[mes.guild.id].levelsMap.keys():
             await usersProcessing.fix_level_role(user=mes.author, rolesList=mes.guild.roles,
                                                  levelRoleDict=DBGuilds[mes.guild.id].levelsMap,
                                                  funcX=get_level_from_exp,
                                                  exp=DBUser.exp)
+        await _dialog.message.bomb_message2(mes=mes, text=f'{mes.author.name} '
+                                                          f'получил(а) новый уровень - {DBUser.Level}!', type='error')
 
     # Пуск команд
     try:
@@ -177,6 +178,15 @@ async def tm(ctx):
     await ctx.message.delete()
     text = '12 *3* 123'
     await ctx.send(text)
+
+
+@bot.command()
+async def test(ctx):
+    await ctx.message.delete()
+    text = 'qqq'
+    text2 = 'www'
+    await _dialog.message.bomb_message2(mes=ctx.message, text=f'{text} '
+                                                      f'some text - {text2}!', type='error')
 
 
 # Переустановка опыта и уровня пользователя
@@ -311,7 +321,7 @@ async def t(ctx: discord.ext.commands.Context, *words):
     except ValueError as valErr:
         await _dialog.message.bomb_message(ctx=ctx, message=str(valErr), type='error')
 
-bot.command(name="т", pass_context=True)(stats.callback)
+bot.command(name="т", pass_context=True)(t.callback)
 
 
 # Поиск gif (дял команды выше)
@@ -367,6 +377,8 @@ async def ban(ctx: discord.ext.commands.Context):
         if role is None:
             await _dialog.message.bomb_message(ctx=ctx, message='роль сохранённая в настроках не найдена', type='error')
             return
+        await ctx.send(f'```Пользователю {ctx.message.mentions[0].name} '
+                       f'ограничены функции на {DBGuilds[ctx.guild.id].muteTime}с.```')
         await usersProcessing.give_timer_role(user=ctx.message.mentions[0], role=role,
                                               timeSeconds=DBGuilds[ctx.guild.id].muteTime)
     else:
@@ -382,6 +394,8 @@ async def lmute(ctx: discord.ext.commands.Context):
         if role is None:
             await _dialog.message.bomb_message(ctx=ctx, message='роль сохранённая в настроках не найдена', type='error')
             return
+        await ctx.send(f'```Пользователь {ctx.message.mentions[0].name} '
+                       f'ограничен в текстовых каналах на {DBGuilds[ctx.guild.id].muteTime}с.```')
         await usersProcessing.give_timer_role(user=ctx.message.mentions[0], role=role,
                                               timeSeconds=DBGuilds[ctx.guild.id].muteTime)
     else:
@@ -397,6 +411,8 @@ async def mute(ctx: discord.ext.commands.Context):
         if role is None:
             await _dialog.message.bomb_message(ctx=ctx, message='роль сохранённая в настроках не найдена', type='error')
             return
+        await ctx.send(f'```Пользователю {ctx.message.mentions[0].name} '
+                       f'выдан мут на {DBGuilds[ctx.guild.id].muteTime}с.```')
         await usersProcessing.give_timer_role(user=ctx.message.mentions[0], role=role,
                                               timeSeconds=DBGuilds[ctx.guild.id].muteTime)
     else:
@@ -412,6 +428,8 @@ async def voice_mute(ctx: discord.ext.commands.Context):
         if role is None:
             await _dialog.message.bomb_message(ctx=ctx, message='роль сохранённая в настроках не найдена', type='error')
             return
+        await ctx.send(f'```Пользователю {ctx.message.mentions[0].name} '
+                       f'ограничен доступ к голосовым каналам {DBGuilds[ctx.guild.id].muteTime}с.```')
         await usersProcessing.give_timer_role(user=ctx.message.mentions[0], role=role,
                                               timeSeconds=DBGuilds[ctx.guild.id].muteTime)
     else:
@@ -573,6 +591,7 @@ async def set_param(ctx: discord.ext.commands.Context, *words):
         await message.bomb_message(ctx=ctx, message='Неверное ключевое слово', type='error')
     else:
         DBGeneralSettings.__dict__[words[0]] = int(words[1])
+        GeneralSettingsService.update_general_settings(generalSettings=DBGeneralSettings)
         await message.bomb_message(ctx=ctx, message='Настройка {0} обновлена'.format(words[0]))
 
 
@@ -595,12 +614,12 @@ def get_exp_from_level(exp: float):
 
 
 def get_level_from_exp(exp: float):
-    if exp < 450:
-        return 0
-    return int(0.5 + math.sqrt(exp - 450) / (10 * (math.sqrt(2))))
+    return 0 if exp < 450 else int(0.5 + math.sqrt(exp - 450) / (10 * (math.sqrt(2))))
 
 
 async def update_counters(discordGuild):
+    if DBGuilds[discordGuild.id].membersCounterChatId is None:
+        return
     memberCounterChannel = discord.utils.get(discordGuild.text_channels,
                                              id=DBGuilds[discordGuild.id].membersCounterChatId)
     await memberCounterChannel.edit(name='Участников: {0}'.format(discordGuild.member_count))

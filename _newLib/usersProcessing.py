@@ -18,11 +18,12 @@ async def fix_level_role(user, rolesList, levelRoleDict, funcX, exp: float):
     level = funcX(exp)
     roleLevel = 0
 
+
     for levelKey in levelRoleDict.keys():
-        if levelKey <= level:
+        if levelKey <= level and roleLevel < levelKey:
             roleLevel = levelKey
-        else:
-            break
+
+    print(f'fixLevelRole: level: {level}   roleLevel: {roleLevel}')
 
     for levelKey in levelRoleDict.keys():
         answer = discord.utils.get(user.roles, id=levelRoleDict[levelKey])
@@ -30,8 +31,7 @@ async def fix_level_role(user, rolesList, levelRoleDict, funcX, exp: float):
         if answer is not None:
             await user.remove_roles(answer)
 
-    print(f'roleLevel: {roleLevel}')
-    # На случай если roleLevel = 0, а роли на нулево уровне нет
+    # На случай если roleLevel = 0, а роли на нулевом уровне нет
     if roleLevel in levelRoleDict.keys():
         await user.add_roles(discord.utils.get(rolesList, id=levelRoleDict[roleLevel]))
 
