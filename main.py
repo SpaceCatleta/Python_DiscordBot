@@ -191,8 +191,10 @@ async def test(ctx):
 
 # Переустановка опыта и уровня пользователя
 @bot.command()
-async def level(ctx):
+async def level(ctx, *words):
     await ctx.message.delete()
+    await _dialog.message.log(author=ctx.author, message='вызов проверки уровня', ctx=ctx, params=words)
+
     targetUser = ctx.message.mentions[0] if len(ctx.message.mentions) > 0 else ctx.author.id
 
     DBUser = UserService.get_user_by_id(userId=targetUser)
@@ -639,7 +641,7 @@ def get_level_from_exp(exp: float):
 
 
 def exp_from_stats(symbols: int, messages: int, time: int, expMod: float):
-    return (symbols + messages) / 10.0 + time * 0 - expMod
+    return (symbols + messages) / 10.0 + time * 0 + expMod
     # + round(time / 60, 1)
 
 
