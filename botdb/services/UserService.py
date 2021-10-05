@@ -94,7 +94,7 @@ def append_stats_on_messages_with_level_check(userId: int, exp: float, mesCount:
     Repos.update_user_on_messages(userId=baseUser.userId, exp=baseUser.exp, messagesCount=baseUser.messagesCount,
                                   symbolsCount=baseUser.symbolsCount)
     new_level = funcX(baseUser.exp)
-    return True if new_level > old_level else False
+    return True if new_level != old_level else False
 
 
 # Обновляет только поля exp и voice_chat_time пользователя

@@ -35,6 +35,21 @@ def get_user_link(ctx):
         raise ValueError('Не указан пользователь')
 
 
+def get_time(text: str):
+    text = text.lower()
+    try:
+        if text[-1] == 'ч' or text[-1] == 'h':
+            return int(text[:-1]) * 3600
+        elif text[-1] == 'м' or text[-1] == 'm':
+            return int(text[:-1]) * 60
+        elif text[-1] == 'с' or text[-1] == 's':
+            return int(text)
+        else:
+            return int(text)
+    except ValueError:
+        raise ValueError('время введено неверно')
+
+
 def get_text_chat_link(ctx):
     print('======')
     for ch in ctx.message.channel_mentions:

@@ -1,4 +1,4 @@
-from botdb.entities import GeneralSettings, GifGroup, Gif, LevelRole
+from botdb.entities import GeneralSettings, GifGroup, Gif, LevelRole, User
 from botdb.services import GeneralSettingsService, GuildService, UserService, GifGroupService, GifService
 from botdb.services import LevelRoleService
 
@@ -186,18 +186,21 @@ async def test(ctx):
     text = 'qqq'
     text2 = 'www'
     await _dialog.message.bomb_message2(mes=ctx.message, text=f'{text} '
-                                                      f'some text - {text2}!', type='error')
+                                                              f'some text - {text2}!', type='error')
 
 
 # Переустановка опыта и уровня пользователя
 @bot.command()
 async def level(ctx):
     await ctx.message.delete()
-    DBUser = UserService.get_user_by_id(userId=ctx.author.id)
-    DBUser.exp = (DBUser.messagesCount + DBUser.symbolsCount) / 10
+    targetUser = ctx.message.mentions[0] if len(ctx.message.mentions) > 0 else ctx.author.id
+
+    DBUser = UserService.get_user_by_id(userId=targetUser)
+    DBUser.exp = exp_from_stats2(UStats=DBUser)
     DBUser.level = get_level_from_exp(exp=DBUser.exp)
     UserService.update_user(user=DBUser)
-    await usersProcessing.fix_level_role(user=ctx.author, rolesList=ctx.guild.roles,
+
+    await usersProcessing.fix_level_role(user=targetUser, rolesList=ctx.guild.roles,
                                          levelRoleDict=DBGuilds[ctx.guild.id].levelsMap, funcX=get_level_from_exp,
                                          exp=DBUser.exp)
 
@@ -217,10 +220,10 @@ async def change_keyword(ctx: discord.ext.commands.Context):
 
 # Показывает статистику указанного пользователя
 @bot.command(name='stats')
-async def stats(ctx: discord.ext.commands.Context):
+async def stats(ctx: discord.ext.commands.Context, *words):
     await ctx.message.delete()
     await ctx.send(embed=dataProcessing.user_stat_embed(ctx=ctx, funcX=get_exp_from_level))
-    # await ctx.send(content=UserService.get_user_by_id(userId=ctx.author.id))
+    await _dialog.message.log(author=ctx.author, message='вызов статистики', ctx=ctx, params=words)
 bot.command(name="stat", pass_context=True)(stats.callback)
 
 
@@ -272,6 +275,11 @@ async def t(ctx: discord.ext.commands.Context, *words):
 
             gifGroup = GifGroupService.get_gif_group_by_name(name=words[1])
 
+            if words[0] == 'info':    # ===== ПОЛУЧЕНИЕ ИНФОРМАЦИИ О ТРИГГЕРЕ
+                count = GifService.get_gif_count_by_group_id(groupId=gifGroup.groupId)
+                answer = await dataBaseProcessing.print_gif_group(gifGroup=gifGroup, gifCount=count)
+                await ctx.send('```{0}```'.format(answer))
+
             if not (gifGroup.authorId == ctx.author.id or gifGroup.accessLevel == 1):
                 raise ValueError('у вас нет прав использовать данную команду')
 
@@ -289,11 +297,6 @@ async def t(ctx: discord.ext.commands.Context, *words):
                 gifGroup.name = newName
                 GifGroupService.update_gif_group(gifGroup=gifGroup)
                 await _dialog.message.bomb_message(ctx=ctx, message='ключевое слово изменено')
-
-            elif words[0] == 'info':    # ===== ПОЛУЧЕНИЕ ИНФОРМАЦИИ О ТРИГГЕРЕ
-                count = GifService.get_gif_count_by_group_id(groupId=gifGroup.groupId)
-                answer = await dataBaseProcessing.print_gif_group(gifGroup=gifGroup, gifCount=count)
-                await ctx.send('```{0}```'.format(answer))
 
             elif words[0] == 'add':     # ===== ДОБАВЛЕНИЕ GIF
                 gifUrl = await search_gif_mes(ctx=ctx)
@@ -343,7 +346,8 @@ async def search_gif_mes(ctx):
 @commands.has_guild_permissions(manage_channels=True)
 async def mod(ctx: discord.ext.commands.Context):
     await ctx.message.delete()
-    await _dialog.message.log(author=ctx.author, message='Воспользовался модераторской командой')
+    await _dialog.message.log(author=ctx.author, message='Воспользовался модераторской командой',
+                              params=ctx.message.content.split(' '))
 
 
 @mod.command(name='help')
@@ -361,6 +365,11 @@ async def exp(ctx: discord.ext.commands.Context, *words):
 
         discordUser = messagesProcessing.get_user_link(ctx=ctx)
         UserService.add_user_exp_modifier2(userId=discordUser.id, exp=expChanging, expModifier=expChanging)
+        # Это вставка из -level для уточнения уровняы
+        DBUser = UserService.get_user_by_id(userId=discordUser.id)
+        DBUser.exp = exp_from_stats2(UStats=DBUser)
+        DBUser.level = get_level_from_exp(exp=DBUser.exp)
+        UserService.update_user(user=DBUser)
 
         text = 'бонус к опыту выдан' if expChanging >= 0 else 'штраф к опыту выдан'
         await _dialog.message.bomb_message(ctx=ctx, message=text)
@@ -372,8 +381,7 @@ async def exp(ctx: discord.ext.commands.Context, *words):
 @mod.command()
 async def ban(ctx: discord.ext.commands.Context):
     if len(ctx.message.mentions) > 0:
-        roleId = DBGuilds[ctx.guild.id].banBotFunctions
-        role = discord.utils.get(iterable=ctx.guild.roles, id=roleId)
+        role = discord.utils.get(iterable=ctx.guild.roles, id=DBGuilds[ctx.guild.id].banBotFunctions)
         if role is None:
             await _dialog.message.bomb_message(ctx=ctx, message='роль сохранённая в настроках не найдена', type='error')
             return
@@ -389,8 +397,7 @@ async def ban(ctx: discord.ext.commands.Context):
 @mod.command()
 async def lmute(ctx: discord.ext.commands.Context):
     if len(ctx.message.mentions) > 0:
-        roleId = DBGuilds[ctx.guild.id].lightMuteRoleId
-        role = discord.utils.get(iterable=ctx.guild.roles, id=roleId)
+        role = discord.utils.get(iterable=ctx.guild.roles, id=DBGuilds[ctx.guild.id].lightMuteRoleId)
         if role is None:
             await _dialog.message.bomb_message(ctx=ctx, message='роль сохранённая в настроках не найдена', type='error')
             return
@@ -406,15 +413,23 @@ async def lmute(ctx: discord.ext.commands.Context):
 @mod.command()
 async def mute(ctx: discord.ext.commands.Context):
     if len(ctx.message.mentions) > 0:
-        roleId = DBGuilds[ctx.guild.id].muteRoleId
-        role = discord.utils.get(iterable=ctx.guild.roles, id=roleId)
+        role = discord.utils.get(iterable=ctx.guild.roles, id=DBGuilds[ctx.guild.id].muteRoleId)
         if role is None:
             await _dialog.message.bomb_message(ctx=ctx, message='роль сохранённая в настроках не найдена', type='error')
             return
+
+        words = ctx.message.content.split(' ')
+        muteTime = DBGuilds[ctx.guild.id].muteTime
+        if len(words) >= 4:
+            try:
+                muteTime = messagesProcessing.get_time(text=ctx.message.content.split(' ')[2])
+            except ValueError as valErr:
+                await _dialog.message.bomb_message(ctx=ctx, message=str(valErr), type='error')
+
         await ctx.send(f'```Пользователю {ctx.message.mentions[0].name} '
                        f'выдан мут на {DBGuilds[ctx.guild.id].muteTime}с.```')
         await usersProcessing.give_timer_role(user=ctx.message.mentions[0], role=role,
-                                              timeSeconds=DBGuilds[ctx.guild.id].muteTime)
+                                              timeSeconds=muteTime)
     else:
         raise ValueError('Не указан пользователь')
 
@@ -423,8 +438,7 @@ async def mute(ctx: discord.ext.commands.Context):
 @mod.command()
 async def voice_mute(ctx: discord.ext.commands.Context):
     if len(ctx.message.mentions) > 0:
-        roleId = DBGuilds[ctx.guild.id].muteVoiceChatRoleId
-        role = discord.utils.get(iterable=ctx.guild.roles, id=roleId)
+        role = discord.utils.get(iterable=ctx.guild.roles, id=DBGuilds[ctx.guild.id].muteVoiceChatRoleId)
         if role is None:
             await _dialog.message.bomb_message(ctx=ctx, message='роль сохранённая в настроках не найдена', type='error')
             return
@@ -469,21 +483,26 @@ async def set_param(ctx: discord.ext.commands.Context, *words):
             if words[0] in ('maxLinks', 'muteTime', 'personalRolesAllowed'):
                 DBGuilds[ctx.guild.id].__dict__[words[0]] = int(words[1])
                 GuildService.update_guild_common(guild=DBGuilds[ctx.guild.id])
+
             elif words[0] in ('banBotFunctions', 'noLinksRoleId',
                               'lightMuteRoleId', 'muteRoleId', 'muteVoiceChatRoleId'):
                 roleId = messagesProcessing.get_role(ctx=ctx, bufferParts=3).id
                 DBGuilds[ctx.guild.id].__dict__[words[0]] = roleId
                 GuildService.update_guild_roles(guild=DBGuilds[ctx.guild.id])
+
             elif words[0] == 'welcomePhrase':
                 DBGuilds[ctx.guild.id].__dict__[words[0]] = ' '.join(words[1:])
                 GuildService.update_guild_welcome_phrase(guild=DBGuilds[ctx.guild.id])
+
             elif words[0] == 'welcomeGifGroupId':
                 gifGroup: GifGroup.GifGroup = GifGroupService.get_gif_group_by_name(name=words[1])
                 DBGuilds[ctx.guild.id].__dict__[words[0]] = gifGroup.groupId
                 GuildService.update_welcome_gif_group_id(guild=DBGuilds[ctx.guild.id])
+
             elif words[0] == 'membersCounterChatId':
                 DBGuilds[ctx.guild.id].__dict__[words[0]] = messagesProcessing.get_text_chat_link(ctx=ctx).id
                 GuildService.update_guild_chats(guild=DBGuilds[ctx.guild.id])
+
             else:
                 await message.bomb_message(ctx=ctx, message='Данная настройка в данное время недоступна ', type='error')
                 return
@@ -511,6 +530,7 @@ async def edit_level(ctx: discord.ext.commands.Context, *words):
         if words[0] == 'set':
             if levelNum in DBGuilds[guildId].levelsMap.keys():
                 LevelRoleService.update_level_role(levelRole=levelRole)
+
             else:
                 LevelRoleService.add_level_role(levelRole=levelRole)
             DBGuilds[guildId].levelsMap[levelNum] = roleId
@@ -609,12 +629,23 @@ async def sys_shutdown():
 # СИСТЕМНЫЕ ФУНКЦИИ
 # ======================================================================================================================
 
+
 def get_exp_from_level(exp: float):
     return 500 + (exp - 1) * 2000 * (exp / 10)
 
 
 def get_level_from_exp(exp: float):
     return 0 if exp < 450 else int(0.5 + math.sqrt(exp - 450) / (10 * (math.sqrt(2))))
+
+
+def exp_from_stats(symbols: int, messages: int, time: int, expMod: float):
+    return (symbols + messages) / 10.0 + time * 0 - expMod
+    # + round(time / 60, 1)
+
+
+def exp_from_stats2(UStats: User.User):
+    return exp_from_stats(symbols=UStats.symbolsCount, messages=UStats.messagesCount,
+                          time=UStats.voiceChatTime,expMod=UStats.expModifier)
 
 
 async def update_counters(discordGuild):
