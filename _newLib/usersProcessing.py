@@ -25,6 +25,7 @@ async def fix_level_role(user, rolesList, levelRoleDict, funcX, exp: float):
 
     print(f'fixLevelRole: level: {level}   roleLevel: {roleLevel}')
 
+    # поиск и удаление других ролей-уровней
     for levelKey in levelRoleDict.keys():
         answer = discord.utils.get(user.roles, id=levelRoleDict[levelKey])
 

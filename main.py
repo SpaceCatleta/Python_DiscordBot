@@ -47,13 +47,20 @@ async def on_ready():
 
     # дорассчёт статистики
     await _dialog.message.log(message='обнаружено время последней записи: {0}'.format(lastWriteTime))
-    time: datetime = datetime.strptime(lastWriteTime, "%Y-%m-%d %H:%M:%S")
-    N = 4
-    time.astimezone(tzoffset("UTC+{}".format(N), N * 60 * 60))
-    for guildId in DBGuilds:
-        answer = await dataProcessing.calc_all_stats_after_time(guild=bot.get_guild(guildId), time=time)
-        await _dialog.message.log(message=str(answer))
-        await update_counters(bot.get_guild(guildId))
+
+    try:
+        time: datetime = datetime.strptime(lastWriteTime, "%Y-%m-%d %H:%M:%S")
+        N = 4
+        time.astimezone(tzoffset("UTC+{}".format(N), N * 60 * 60))
+        for guildId in DBGuilds:
+            answer = await dataProcessing.calc_all_stats_after_time(guild=bot.get_guild(guildId), time=time)
+            await _dialog.message.log(message=str(answer))
+            await update_counters(bot.get_guild(guildId))
+
+    except ValueError as valErr:
+        print('Обработана ошибка:\n' + str(valErr))
+        await _dialog.message.log(message=' ошибка при чтении времини, будет только перезаписано время')
+        await update_write_time()
 
     message.generalSettings = DBGeneralSettings
     await _dialog.message.log(message='bot online', color='yellow')
@@ -195,9 +202,10 @@ async def level(ctx, *words):
     await ctx.message.delete()
     await _dialog.message.log(author=ctx.author, message='вызов проверки уровня', ctx=ctx, params=words)
 
-    targetUser = ctx.message.mentions[0] if len(ctx.message.mentions) > 0 else ctx.author.id
+    targetUser = ctx.message.mentions[0] if len(ctx.message.mentions) > 0 else ctx.author
+    print(f'targetUser: {targetUser}')
 
-    DBUser = UserService.get_user_by_id(userId=targetUser)
+    DBUser = UserService.get_user_by_id(userId=targetUser.id)
     DBUser.exp = exp_from_stats2(UStats=DBUser)
     DBUser.level = get_level_from_exp(exp=DBUser.exp)
     UserService.update_user(user=DBUser)
