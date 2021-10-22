@@ -365,7 +365,34 @@ async def show(ctx: discord.ext.commands.Context):
     await ctx.send(textFileProcessing.RadAll(filename='information/moder_com_help.txt'))
 
 
-# мутит команды бота
+# Удаление сообщений
+@mod.command(name='clearmes')
+async def clear_messages(ctx: discord.ext.commands.Context, *words):
+
+    try:
+        if not words[0].isdigit():
+            raise ValueError('число введено неверно')
+
+        messagesToDelete = int(words[0])
+        discordUser = messagesProcessing.get_user_link_no_exception(ctx=ctx)
+        isDeleteExp = False
+
+        if(len(words) > 1):
+            if(words[1] == '-exp'):
+                isDeleteExp = True
+
+        print(f'messagesToDelete: {messagesToDelete}')
+        print(f'discordUser: {discordUser}')
+        print(f'isDeleteExp: {isDeleteExp}')
+
+        await messagesProcessing.delete_messages(bot, ctx=ctx, n = messagesToDelete,
+                                                 discordUser=discordUser, isDeleteExp=isDeleteExp)
+
+    except ValueError as valErr:
+        await _dialog.message.bomb_message(ctx=ctx, message=str(valErr), type='error')
+
+
+# выдаёт бонус/штраф к опыту
 @mod.command()
 async def exp(ctx: discord.ext.commands.Context, *words):
     try:
@@ -405,7 +432,7 @@ async def ban(ctx: discord.ext.commands.Context):
 
 # мутит команды бота
 @mod.command()
-async def lmute(ctx: discord.ext.commands.Context):
+async def light_mute(ctx: discord.ext.commands.Context):
     if len(ctx.message.mentions) > 0:
         role = discord.utils.get(iterable=ctx.guild.roles, id=DBGuilds[ctx.guild.id].lightMuteRoleId)
         if role is None:
