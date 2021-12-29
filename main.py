@@ -289,8 +289,10 @@ async def t(ctx: discord.ext.commands.Context, *words):
                 count = GifService.get_gif_count_by_group_id(groupId=gifGroup.groupId)
                 answer = await dataBaseProcessing.print_gif_group(gifGroup=gifGroup, gifCount=count)
                 await ctx.send('```{0}```'.format(answer))
+                return
 
-            if not (gifGroup.authorId == ctx.author.id or gifGroup.accessLevel == 1):
+            if not (gifGroup.authorId == ctx.author.id or gifGroup.accessLevel == 1
+                    or ctx.author.guild_permissions.administrator):
                 raise ValueError('у вас нет прав использовать данную команду')
 
             if words[0] == 'lock':      # ===== СМЕНА РЕЖИМА ДОСТУПА
