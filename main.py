@@ -1,5 +1,6 @@
 from botdb.entities import GeneralSettings, GifGroup, Gif, LevelRole, User
-from botdb.services import GeneralSettingsService, GuildService, UserService, GifGroupService, GifService
+from botdb.services import GeneralSettingsService, GuildService, UserService, GifGroupService,\
+    GifService, SpamChannelsService
 from botdb.services import LevelRoleService
 
 from _dialog import message
@@ -79,6 +80,16 @@ async def on_message(mes: discord.Message):
                                           'количеством упоминаний'.format(mes.author.name, mes.channel.name))
         return
     count = messagesProcessing.text_len(mes.content)
+
+
+    if(mes.channel.id in DBGuilds[mes.guild.id].spamChannels):
+        # Пуск команд
+        try:
+            await asyncio.wait_for(bot.process_commands(message=mes), timeout=DBGeneralSettings.timeUntilTimeout)
+        except asyncio.TimeoutError:
+            await mes.channel.send('```timeout```')
+        return
+
 
     # Проверка уровня
     if UserService.append_stats_on_messages_with_level_check(userId=mes.author.id, mesCount=1, symbolsCount=count,
@@ -254,7 +265,9 @@ async def t(ctx: discord.ext.commands.Context, *words):
             await ctx.send(textFileProcessing.RadAll(filename='information/triggers_help.txt'))
 
         elif words[0] == 'list':    # ===== ЗАПРОС ДАННЫХ О ВСЁМ СПИСКЕ
-            await ctx.send('```{0}```'.format('\t'.join(group.name for group in GifGroupService.get_all_gif_groups())))
+            gifKeyWords = '\t'.join(group.name for group in GifGroupService.get_all_gif_groups())
+            await ctx.send(f'```Всего gif: {GifService.get_all_gif_count()}'
+                           f'   всего ключевых слов: {GifGroupService.get_gif_group_count()} \n{gifKeyWords}```')
 
         elif words[0] == 'new':     # ===== ДОБАВЛЕНИЕ НОВОГО КЛЮЧЕВОГО СЛОВА
             if GifGroupService.is_exist_gif_group_by_name(name=words[1]):
@@ -510,6 +523,27 @@ async def guild_help(ctx: discord.ext.commands.Context):
 @guild.command(name='show')
 async def show(ctx: discord.ext.commands.Context):
     await ctx.send(content='```{0}```'.format(DBGuilds[ctx.guild.id]))
+
+
+# Выводит все настройки сервера
+@guild.command(name='spam')
+async def spam(ctx: discord.ext.commands.Context):
+    guildId = ctx.guild.id
+    channelId = ctx.channel.id
+
+    if(SpamChannelsService.is_exist(guildId=guildId, channelId=channelId)):
+        SpamChannelsService.delete_by_id(guildId=guildId, channelId=channelId)
+        DBGuilds[guildId].spamChannels.remove(channelId)
+
+        await _dialog.message.log(author=ctx.author, message='Удалил канал из списка спама')
+        await _dialog.message.bomb_message(ctx=ctx, message='Канал удалён из списка спама')
+    else:
+        SpamChannelsService.add2(guildId=guildId, channelId=channelId)
+        DBGuilds[guildId].spamChannels.append(channelId)
+
+        await _dialog.message.log(author=ctx.author, message='Добавил канал в список спама')
+        await _dialog.message.bomb_message(ctx=ctx, message='Канал добавлен в список спама')
+
 
 
 # Изменение настройки сервера

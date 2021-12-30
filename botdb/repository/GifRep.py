@@ -27,6 +27,11 @@ def get_gif_count_by_group_id(groupId: int):
     return cursor.fetchone()
 
 
+def get_all_gif_count():
+    cursor.execute(""" SELECT COUNT(gif_url) FROM gifs; """)
+    return cursor.fetchone()
+
+
 def get_gif(groupId: int, index: int):
     cursor.execute("""
         SELECT * FROM gifs

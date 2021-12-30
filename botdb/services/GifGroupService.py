@@ -44,6 +44,11 @@ def get_gif_group_by_name(name: str):
     return GifGroup(groupId=row[0], authorId=row[1], createDate=row[2],
                     accessLevel=row[3], groupType=row[4], name=row[5], phrase=row[6])
 
+
+def get_gif_group_count():
+    return Repos.get_gif_group_count()[0]
+
+
 # def get_gif_groups_by_type(groupType: str):
 #     rows = Repos.get_gif_groups_by_type(groupType=groupType)
 #     answer = []

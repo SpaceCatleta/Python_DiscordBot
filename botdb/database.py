@@ -1,6 +1,6 @@
 import sqlite3 as sql
 from botdb.repository import UserRep, GifGroupRep, GifRep, UserVoiceChatRep, GuildRep, LevelRoleRep, GuldMemberRep,\
-    QuestionRep, GeneralSettingsRep
+    QuestionRep, GeneralSettingsRep, SpamChannelsRep
 
 connection: sql.Connection
 cursor: sql.Cursor
@@ -37,6 +37,9 @@ def open(path: str):
 
     GeneralSettingsRep.connection = connection
     GeneralSettingsRep.cursor = cursor
+
+    SpamChannelsRep.connection = connection
+    SpamChannelsRep.cursor = cursor
 
     print('database: connected - {0}'.format(path))
 

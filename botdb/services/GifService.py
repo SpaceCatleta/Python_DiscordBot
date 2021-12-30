@@ -21,6 +21,11 @@ def get_gif_count_by_group_id(groupId: int):
     return Repos.get_gif_count_by_group_id(groupId=groupId)[0]
 
 
+# Возвращает кол-во всех записей
+def get_all_gif_count():
+    return Repos.get_all_gif_count()[0]
+
+
 # Возвращает одну запись из указанной группы(group_id) и её порядковым номером (определяется порядком хранения в бд)
 def get_gif(groupId: int, index: int):
     row = Repos.get_gif(groupId=groupId, index=index - 1)

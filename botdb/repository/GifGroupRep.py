@@ -38,6 +38,11 @@ def get_gif_group_by_name(name: str):
         """, (name,))
     return cursor.fetchone()
 
+
+def get_gif_group_count():
+    cursor.execute(""" SELECT COUNT(group_id) from gif_groups; """)
+    return cursor.fetchone()
+
 # def get_gif_groups_by_type(groupType: str):
 #     cursor.execute("""
 #         SELECT * from gif_groups

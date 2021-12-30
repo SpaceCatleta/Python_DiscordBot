@@ -18,6 +18,7 @@ class Guild:
     welcomePhrase: int
     welcomeGifGroupId: int
     levelsMap: dict
+    spamChannels: list
 
     def __init__(self, guildId=None, maxLinks=None, muteTime=None, personalRolesAllowed=None, banBotFunctions=None,
                  noLinksRoleId=None, lightMuteRoleId=None, muteRoleId=None, muteVoiceChatRoleId=None, CHIELDChatId=None,
@@ -41,6 +42,8 @@ class Guild:
         self.welcomePhrase = welcomePhrase
         self.welcomeGifGroupId = welcomeGifGroupId
         self.levelsMap = {}
+        self.spamChannels = []
+
 
     def __str__(self):
         return '\n'.join('{0}:   {1}'.format(field, self.__dict__[field]) for field in self.__dict__.keys())

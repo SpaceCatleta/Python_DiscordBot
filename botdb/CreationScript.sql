@@ -93,18 +93,17 @@ CREATE TABLE IF NOT EXISTS 'questions' (
 
 =====
 
-CREATE TABLE IF NOT EXISTS 'questions' (
-    'question_id'  INTEGER PRIMARY KEY AUTOINCREMENT,
-    'author_user_id' int REFERENCES users (user_id),
-    'uses_count' int NOT NULL DEFAULT 0,
-    'question_text' VARCHAR(100) NOT NULL UNIQUE,
-    'answer_text' VARCHAR(1850) NOT NULL);
-
-=====
-
 CREATE TABLE IF NOT EXISTS 'general_settings' (
     'update_delay' int DEFAULT 60,
     'time_until_timeout' int DEFAULT 30,
     'timeouts_limit' int DEFAULT 5,
     'bomb_messages_time' int DEFAULT 15,
     'dialog_window_time' int DEFAULT 60);
+    
+=====
+
+CREATE TABLE IF NOT EXISTS 'spam_channels' (
+    'guild_id' int REFERENCES guilds (guild_id),
+    'channel_id' int NOT NULL,
+
+    PRIMARY KEY (guild_id, channel_id));
