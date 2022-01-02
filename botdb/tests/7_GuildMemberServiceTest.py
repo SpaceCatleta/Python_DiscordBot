@@ -2,8 +2,8 @@ import unittest
 from datetime import datetime as DateTime
 from botdb.services import GuildService
 from botdb.services import UserService
-from botdb.services import GuildMemberService
-from botdb.entities.GuildMember import GuildMember
+from botdb.services import GuildUserService
+from botdb.entities.GuildUser import GuildMember
 
 
 class TestGuildMemberService(unittest.TestCase):
@@ -16,7 +16,7 @@ class TestGuildMemberService(unittest.TestCase):
 
     @classmethod
     def setUpClass(cls):
-        GuildMemberService.clear_table()
+        GuildUserService.clear_table()
         UserService.clear_table()
         GuildService.clear_table()
 
@@ -31,15 +31,15 @@ class TestGuildMemberService(unittest.TestCase):
         print('\n[[[   TESTING GuildMemberService   ]]]\n')
 
     def setUp(self):
-        GuildMemberService.clear_table()
+        GuildUserService.clear_table()
 
-        GuildMemberService.add_guild_member(guildMember=GuildMember(guildId=101, userId=11))
-        GuildMemberService.add_guild_member(guildMember=GuildMember(guildId=101, userId=12))
-        GuildMemberService.add_guild_member(guildMember=GuildMember(guildId=102, userId=13))
+        GuildUserService.add_guild_member(guildMember=GuildMember(guildId=101, userId=11))
+        GuildUserService.add_guild_member(guildMember=GuildMember(guildId=101, userId=12))
+        GuildUserService.add_guild_member(guildMember=GuildMember(guildId=102, userId=13))
 
     @classmethod
     def tearDownClass(cls):
-        GuildMemberService.clear_table()
+        GuildUserService.clear_table()
         UserService.clear_table()
         GuildService.clear_table()
     # =====================
@@ -49,9 +49,9 @@ class TestGuildMemberService(unittest.TestCase):
         print('Testing add_guild_member() and get_guild_member_by_ids()')
         member = GuildMember(guildId=103, userId=11, visitsCount=1, warningsCount=0, banBotFunctions=0)
 
-        GuildMemberService.add_guild_member(guildMember=member)
+        GuildUserService.add_guild_member(guildMember=member)
 
-        answer = GuildMemberService.get_guild_member_by_ids(guildId=member.guildId, userId=member.userId)
+        answer = GuildUserService.get_guild_member_by_ids(guildId=member.guildId, userId=member.userId)
         self._check_data(checking_obj=answer, control_obj=member)
         print('Successful\n')
     # =====================
@@ -60,7 +60,7 @@ class TestGuildMemberService(unittest.TestCase):
     def test_get_all_guild_members(self):
         print('Testing get_all_guild_members()')
 
-        answer = len(GuildMemberService.get_all_guild_members())
+        answer = len(GuildUserService.get_all_guild_members())
         self.assertEqual(answer, 3, 'rows_count should be {0} actual {1}'.format(3, answer))
         print('Successful\n')
     # =====================
@@ -69,7 +69,7 @@ class TestGuildMemberService(unittest.TestCase):
     def test_get_members_count(self):
         print('Testing get_members_count()')
 
-        answer = GuildMemberService.get_members_count()
+        answer = GuildUserService.get_members_count()
         self.assertEqual(answer, 3, 'rows_count should be {0} actual {1}'.format(3, answer))
         print('Successful\n')
     # =====================
@@ -78,7 +78,7 @@ class TestGuildMemberService(unittest.TestCase):
     def test_get_members_count_by_guild_id(self):
         print('Testing get_members_count_by_guild_id()')
 
-        answer = GuildMemberService.get_members_count_by_guild_id(guildId=101)
+        answer = GuildUserService.get_members_count_by_guild_id(guildId=101)
         self.assertEqual(answer, 2, 'rows_count should be {0} actual {1}'.format(2, answer))
         print('Successful\n')
     # =====================
@@ -89,8 +89,8 @@ class TestGuildMemberService(unittest.TestCase):
         member = GuildMember(guildId=102, userId=13, visitsCount=2, warningsCount=2,
                              banBotFunctions=1, personalRoleId=123, punishmentRoleId=123,
                              punishmentEndDate=DateTime.strptime('2021-10-10 12:30:12', "%Y-%m-%d %H:%M:%S"))
-        GuildMemberService.update_guild_member(guildMember=member)
-        member2 = GuildMemberService.get_guild_member_by_ids(guildId=102, userId=13)
+        GuildUserService.update_guild_member(guildMember=member)
+        member2 = GuildUserService.get_guild_member_by_ids(guildId=102, userId=13)
         self._check_data(checking_obj=member2, control_obj=member)
         print('Successful\n')
     # =====================
@@ -99,8 +99,8 @@ class TestGuildMemberService(unittest.TestCase):
         print('Testing update_guild_member_personal_role()')
         member = GuildMember(guildId=102, userId=13, visitsCount=1, warningsCount=0,
                              banBotFunctions=0, personalRoleId=123)
-        GuildMemberService.update_guild_member_personal_role(guildMember=member)
-        member2 = GuildMemberService.get_guild_member_by_ids(guildId=102, userId=13)
+        GuildUserService.update_guild_member_personal_role(guildMember=member)
+        member2 = GuildUserService.get_guild_member_by_ids(guildId=102, userId=13)
         self._check_data(checking_obj=member2, control_obj=member)
         print('Successful\n')
     # =====================
@@ -108,8 +108,8 @@ class TestGuildMemberService(unittest.TestCase):
     def test_update_guild_member_ban_func(self):
         print('Testing update_guild_member_ban_func()')
         member = GuildMember(guildId=102, userId=13, visitsCount=1, warningsCount=0, banBotFunctions=1)
-        GuildMemberService.update_guild_member_ban_func(guildMember=member)
-        member2 = GuildMemberService.get_guild_member_by_ids(guildId=102, userId=13)
+        GuildUserService.update_guild_member_ban_func(guildMember=member)
+        member2 = GuildUserService.get_guild_member_by_ids(guildId=102, userId=13)
         self._check_data(checking_obj=member2, control_obj=member)
         print('Successful\n')
     # =====================
@@ -120,8 +120,8 @@ class TestGuildMemberService(unittest.TestCase):
         member = GuildMember(guildId=102, userId=13, visitsCount=1, warningsCount=0,
                              banBotFunctions=0, punishmentRoleId=123,
                              punishmentEndDate=DateTime.strptime('2021-10-10 12:30:12', "%Y-%m-%d %H:%M:%S"))
-        GuildMemberService.update_guild_member_punishment(guildMember=member)
-        member2 = GuildMemberService.get_guild_member_by_ids(guildId=102, userId=13)
+        GuildUserService.update_guild_member_punishment(guildMember=member)
+        member2 = GuildUserService.get_guild_member_by_ids(guildId=102, userId=13)
         self._check_data(checking_obj=member2, control_obj=member)
         print('Successful\n')
     # =====================
@@ -129,9 +129,9 @@ class TestGuildMemberService(unittest.TestCase):
     # =====================
     def test_delete_guild_member_by_ids(self):
         print('Testing delete_guild_member_by_ids()')
-        GuildMemberService.delete_guild_member_by_ids(guildId=101, userId=11)
+        GuildUserService.delete_guild_member_by_ids(guildId=101, userId=11)
 
-        answer = GuildMemberService.get_members_count_by_guild_id(guildId=101)
+        answer = GuildUserService.get_members_count_by_guild_id(guildId=101)
         self.assertEqual(answer, 1, 'rows_count should be {0} actual {1}'.format(1, answer))
         print('Successful\n')
     # =====================
@@ -139,9 +139,9 @@ class TestGuildMemberService(unittest.TestCase):
     # =====================
     def test_delete_guild_members_guild_id(self):
         print('Testing delete_guild_members_guild_id()')
-        GuildMemberService.delete_guild_members_guild_id(guildId=101)
+        GuildUserService.delete_guild_members_guild_id(guildId=101)
 
-        answer = GuildMemberService.get_members_count_by_guild_id(guildId=101)
+        answer = GuildUserService.get_members_count_by_guild_id(guildId=101)
         self.assertEqual(answer, 0, 'rows_count should be {0} actual {1}'.format(0, answer))
         print('Successful\n')
     # =====================

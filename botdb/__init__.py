@@ -7,3 +7,4 @@ path = path.split('\\\\')[:-1] + ['BotDB.db']
 path = '\\\\'.join(path)
 
 database.open(path=path)
+database.default_path = path

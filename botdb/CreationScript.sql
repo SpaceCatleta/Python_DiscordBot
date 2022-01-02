@@ -107,3 +107,18 @@ CREATE TABLE IF NOT EXISTS 'spam_channels' (
     'channel_id' int NOT NULL,
 
     PRIMARY KEY (guild_id, channel_id));
+
+=====
+
+CREATE TABLE IF NOT EXISTS 'activity_log'(	
+    'guild_id' int REFERENCES guilds (guild_id),
+    'user_id' int REFERENCES users (user_id),
+    'period' date,
+    'messages_count' int,
+    'symbols_count' int,
+    'voice_chat_time' int,
+    'spam_messages_count' int,
+    'spam_symbols_count' int,
+
+    PRIMARY KEY (guild_id, user_id, period));
+

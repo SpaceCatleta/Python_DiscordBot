@@ -1,10 +1,11 @@
 import sqlite3 as sql
-from botdb.repository import UserRep, GifGroupRep, GifRep, UserVoiceChatRep, GuildRep, LevelRoleRep, GuldMemberRep,\
+from botdb.repository import UserRep, GifGroupRep, GifRep, UserVoiceChatRep, GuildRep, LevelRoleRep, GuildUserRep,\
     QuestionRep, GeneralSettingsRep, SpamChannelsRep
 
 connection: sql.Connection
 cursor: sql.Cursor
 
+default_path: str = ""
 
 def open(path: str):
     global connection, cursor
@@ -29,8 +30,8 @@ def open(path: str):
     LevelRoleRep.connection = connection
     LevelRoleRep.cursor = cursor
 
-    GuldMemberRep.connection = connection
-    GuldMemberRep.cursor = cursor
+    GuildUserRep.connection = connection
+    GuildUserRep.cursor = cursor
 
     QuestionRep.connection = connection
     QuestionRep.cursor = cursor
@@ -43,6 +44,13 @@ def open(path: str):
 
     print('database: connected - {0}'.format(path))
 
+def get_connection():
+    conn =  sql.connect(default_path,detect_types=sql.PARSE_DECLTYPES)
+    return conn, conn.cursor()
+
+def close_connection(conn, cursor):
+    cursor.close()
+    conn.close()
 
 def close():
     connection.close()

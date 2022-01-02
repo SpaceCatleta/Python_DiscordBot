@@ -1,6 +1,7 @@
 from botdb.entities import GeneralSettings, GifGroup, Gif, LevelRole, User
+from botdb.entities.ActivityLog import ActivityLog
 from botdb.services import GeneralSettingsService, GuildService, UserService, GifGroupService,\
-    GifService, SpamChannelsService
+    GifService, SpamChannelsService, ActivityLogService
 from botdb.services import LevelRoleService
 
 from _dialog import message
@@ -54,7 +55,12 @@ async def on_ready():
         N = 4
         time.astimezone(tzoffset("UTC+{}".format(N), N * 60 * 60))
         for guildId in DBGuilds:
-            answer = await dataProcessing.calc_all_stats_after_time(guild=bot.get_guild(guildId), time=time)
+            discordGuild = bot.get_guild(guildId)
+            if discordGuild is None:
+                print(f'сервер {guildId} недоступен')
+                continue
+            answer = await dataProcessing.calc_all_stats_after_time(
+                guild=discordGuild, time=time, spamChannelsId=DBGuilds[guildId].spamChannels)
             await _dialog.message.log(message=str(answer))
             await update_counters(bot.get_guild(guildId))
 
@@ -81,8 +87,10 @@ async def on_message(mes: discord.Message):
         return
     count = messagesProcessing.text_len(mes.content)
 
-
     if(mes.channel.id in DBGuilds[mes.guild.id].spamChannels):
+
+        ActivityLogService.logOneSpamMessage(guildId=mes.guild.id, userId=mes.author.id,
+                                         period=datetime.now().date(), symbolsCount=count)
         # Пуск команд
         try:
             await asyncio.wait_for(bot.process_commands(message=mes), timeout=DBGeneralSettings.timeUntilTimeout)
@@ -106,6 +114,9 @@ async def on_message(mes: discord.Message):
         await _dialog.message.bomb_message2(mes=mes, text=f'{mes.author.name} '
                                                           f'получил(а) новый уровень - {DBUser.Level}!', type='error')
 
+    ActivityLogService.logOneMessage(guildId=mes.guild.id, userId=mes.author.id,
+                                     period=datetime.now().date(), symbolsCount=count)
+
     # Пуск команд
     try:
         await asyncio.wait_for(bot.process_commands(message=mes), timeout=DBGeneralSettings.timeUntilTimeout)
@@ -116,7 +127,7 @@ async def on_message(mes: discord.Message):
 @bot.event
 async def on_voice_state_update(member: discord.Member, before: discord.VoiceState, after: discord.VoiceState):
     await dataProcessing.voice_stats_update(bot=bot, member=member, before=before, after=after,
-                                            users_in_vc=usersInVoiceChats)
+                                            usersInVoice=usersInVoiceChats)
 
 
 @bot.event
@@ -246,6 +257,16 @@ async def stats(ctx: discord.ext.commands.Context, *words):
     await ctx.send(embed=dataProcessing.user_stat_embed(ctx=ctx, funcX=get_exp_from_level))
     await _dialog.message.log(author=ctx.author, message='вызов статистики', ctx=ctx, params=words)
 bot.command(name="stat", pass_context=True)(stats.callback)
+
+# Показывает статистику указанного пользователя
+@bot.command(name='daystats')
+async def stats(ctx: discord.ext.commands.Context, *words):
+    await ctx.message.delete()
+    DBActivity: ActivityLog = ActivityLogService.getByPrimaryKey(
+        guildId=ctx.guild.id, userId=ctx.author.id, period=datetime.now().date())
+    await ctx.send(embed=dataProcessing.user_activity_embed(ctx=ctx))
+    await _dialog.message.log(author=ctx.author, message='вызов активности за день', ctx=ctx, params=words)
+
 
 
 # Команда триггеров

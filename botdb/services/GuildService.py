@@ -51,7 +51,7 @@ def get_guild_boot_setup():
         levelRoles = LevelRoleService.get_level_roles_dict_by_guild_id(guildId=guild.guildId)
         rolesDict = {levelRoles[key].level: levelRoles[key].roleId for key in levelRoles.keys()}
         guild.levelsMap = rolesDict
-        guild.spamChannels = SpamChannelsService.get_by_guild_id(guild.guildId)
+        guild.spamChannels = SpamChannelsService.get_id_list_by_guild_id(guild.guildId)
         answer[guild.guildId] = guild
 
     return answer
