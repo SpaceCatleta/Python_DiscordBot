@@ -87,6 +87,10 @@ async def on_message(mes: discord.Message):
         return
     count = messagesProcessing.text_len(mes.content)
 
+    if (count > 500):
+        await _dialog.message.log(author=mes.author, message=mes.content)
+
+
     if(mes.channel.id in DBGuilds[mes.guild.id].spamChannels):
 
         ActivityLogService.logOneSpamMessage(guildId=mes.guild.id, userId=mes.author.id,

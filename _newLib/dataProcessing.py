@@ -88,21 +88,25 @@ def user_activity_embed(ctx) -> discord.Embed:
     emb.add_field(name=f'Активность за {datetime.now().date()}:',
                   value=f'Напечатано символов: {DBActivity.symbolsCount}\n'
                         f'Отправленно сообщний: {DBActivity.messagesCount}\n'
-                        f'Время в голосовых чатах: {int(DBActivity.voiceChatTime * 10) / 10}c')
+                        f'Время в голосовых чатах: {seconds_to_str(int(DBActivity.voiceChatTime * 10) / 10)}')
 
     return emb
 
-def seconds_to_str(seconds: int):
+def seconds_to_str(seconds: float, checkDays =  False):
     minutes = int(seconds / 60)
     seconds -= minutes * 60
 
     hours = int(minutes / 60)
     minutes -= hours * 60
 
-    days = int(hours / 24)
-    hours -= days * 24
+    answer = f'{hours}:{minutes}:{seconds}'
 
-    return f'{days}д:{hours}:{minutes}:{seconds}'
+    if checkDays:
+        days = int(hours / 24)
+        hours -= days * 24
+        answer = f'{days}д:' + answer
+
+    return answer
 
 
 
