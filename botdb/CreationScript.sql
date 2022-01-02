@@ -68,6 +68,28 @@ CREATE TABLE IF NOT EXISTS 'guilds_members' (
 
 =====
 
+CREATE TABLE IF NOT EXISTS 'guild_users' (
+    'user_id' int,
+    'guild_id' int REFERENCES guilds (guild_id),
+    'visits_count' int DEFAULT 1,
+    'first_entry_date' date,
+    'exit_date' date,
+    'is_present' int DEFAULT 1,
+    'ban_functions' int DEFAULT 0,
+    'exp' real DEFAULT 0,
+    'level' int DEFAULT 0,
+    'messages_count' int DEFAULT 0,
+    'symbols_count' int DEFAULT 0,
+    'voice_chat_time' int DEFAULT 0,
+    'volute_count' int DEFAULT 0,
+    'exp_modifier' int DEFAULT 0,
+
+    PRIMARY KEY (user_id, guild_id)
+    CHECK (is_present IN (0, 1))
+    CHECK (ban_functions IN (0, 1)));
+
+=====
+
 CREATE TABLE IF NOT EXISTS 'level_roles' (
     'guild_id' int REFERENCES guilds (guild_id),
     'level' int NOT NULL,

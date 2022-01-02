@@ -78,7 +78,7 @@ def user_activity_embed(ctx) -> discord.Embed:
     user: discord.abc.User = ctx.message.mentions[0] if len(ctx.message.mentions) > 0 else ctx.author
 
     DBActivity: ActivityLog = ActivityLogService.getByPrimaryKey(
-        guildId=ctx.guild.id, userId=ctx.author.id, period=datetime.now().date())
+        guildId=ctx.guild.id, userId=user.id, period=datetime.now().date())
 
     emb: discord.Embed = discord.Embed(color=discord.colour.Color.dark_magenta(),
                                        title='Пользователь {0}:'.format(user.display_name))
@@ -88,7 +88,7 @@ def user_activity_embed(ctx) -> discord.Embed:
     emb.add_field(name=f'Активность за {datetime.now().date()}:',
                   value=f'Напечатано символов: {DBActivity.symbolsCount}\n'
                         f'Отправленно сообщний: {DBActivity.messagesCount}\n'
-                        f'Время в голосовых чатах: {int(DBActivity.voiceChatTime * 10) / 10}')
+                        f'Время в голосовых чатах: {int(DBActivity.voiceChatTime * 10) / 10}c')
 
     return emb
 

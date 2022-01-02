@@ -262,8 +262,6 @@ bot.command(name="stat", pass_context=True)(stats.callback)
 @bot.command(name='daystats')
 async def stats(ctx: discord.ext.commands.Context, *words):
     await ctx.message.delete()
-    DBActivity: ActivityLog = ActivityLogService.getByPrimaryKey(
-        guildId=ctx.guild.id, userId=ctx.author.id, period=datetime.now().date())
     await ctx.send(embed=dataProcessing.user_activity_embed(ctx=ctx))
     await _dialog.message.log(author=ctx.author, message='вызов активности за день', ctx=ctx, params=words)
 
