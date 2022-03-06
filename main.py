@@ -1,5 +1,4 @@
 from botdb.entities import GeneralSettings, GifGroup, Gif, LevelRole, User
-from botdb.entities.ActivityLog import ActivityLog
 from botdb.services import GeneralSettingsService, GuildService, UserService, GifGroupService,\
     GifService, SpamChannelsService, ActivityLogService
 from botdb.services import LevelRoleService
@@ -70,6 +69,7 @@ async def on_ready():
         await update_write_time()
 
     message.generalSettings = DBGeneralSettings
+    await _dialog.message.log(message=get_system_check_log(), color='yellow')
     await _dialog.message.log(message='bot online', color='yellow')
     print('booted')
     await update_data_loop()
@@ -153,6 +153,9 @@ async def on_member_join(member):
         await member.guild.system_channel.send(triggerGif.gifUrl)
 
     await update_counters(member.guild)
+
+    if member.bot:
+        return
 
     try:
         DBUser = UserService.get_user_by_id(userId=member.id)
@@ -270,6 +273,14 @@ async def stats(ctx: discord.ext.commands.Context, *words):
     await _dialog.message.log(author=ctx.author, message='вызов активности за день', ctx=ctx, params=words)
 
 
+# выводит для печати информацию о глобальных переменных
+@bot.command(name='check')
+@commands.has_guild_permissions(ban_members=True)
+async def stats(ctx: discord.ext.commands.Context, *words):
+    await ctx.message.delete()
+    await ctx.send(f'```{get_system_check_log()}```')
+    await _dialog.message.log(author=ctx.author, message='проверка состояния', ctx=ctx, params=words)
+
 
 # Команда триггеров
 @bot.command()
@@ -294,7 +305,7 @@ async def t(ctx: discord.ext.commands.Context, *words):
 
         elif words[0] == 'new':     # ===== ДОБАВЛЕНИЕ НОВОГО КЛЮЧЕВОГО СЛОВА
             if GifGroupService.is_exist_gif_group_by_name(name=words[1]):
-                raise ValueError('данное ключевое слово уже занято')
+                raise ValueError(f'Ключевое слово <{words[1]}> уже занято')
             newGifGroup = GifGroup.GifGroup(name=words[1].lower(), authorId=ctx.author.id,
                                             createDate=datetime.strftime(datetime.now(), "%Y-%m-%d"))
             if len(words) == 2:
@@ -302,13 +313,13 @@ async def t(ctx: discord.ext.commands.Context, *words):
             else:
                 newGifGroup.phrase = ' '.join(words[2:])
                 GifGroupService.add_new_gif_group_full(gifGroup=newGifGroup)
-            await _dialog.message.bomb_message(ctx=ctx, message='ключевое слово <{0}> создано'.format(newGifGroup.name))
+            await _dialog.message.bomb_message(ctx=ctx, message=f'ключевое слово <{newGifGroup.name}> создано')
 
         else:                       # ===== ВЫЗОВ GIF
             if words[0] not in ('lock', 'edit', 'rename', 'info', 'add', 'DeleteTrigger', 'delete', 'page'):
                 gifGroup = GifGroupService.get_gif_group_by_name(name=words[0])
                 if len(ctx.message.mentions) > 0:
-                    text = '{0} {1} {2}'.format(ctx.author.mention, gifGroup.phrase, ctx.message.mentions[0].mention) \
+                    text = f'{ctx.author.mention} {gifGroup.phrase} {ctx.message.mentions[0].mention}'\
                         if gifGroup.phrase is not None else ctx.message.mentions[0].mention
                     await ctx.send(text + '\n' + GifService.get_random_gif_from_group(groupId=gifGroup.groupId).gifUrl)
                 else:
@@ -324,7 +335,7 @@ async def t(ctx: discord.ext.commands.Context, *words):
             if words[0] == 'info':    # ===== ПОЛУЧЕНИЕ ИНФОРМАЦИИ О ТРИГГЕРЕ
                 count = GifService.get_gif_count_by_group_id(groupId=gifGroup.groupId)
                 answer = await dataBaseProcessing.print_gif_group(gifGroup=gifGroup, gifCount=count)
-                await ctx.send('```{0}```'.format(answer))
+                await ctx.send(f'```{answer}```')
                 return
 
             if not (gifGroup.authorId == ctx.author.id or gifGroup.accessLevel == 1
@@ -349,7 +360,7 @@ async def t(ctx: discord.ext.commands.Context, *words):
             elif words[0] == 'add':     # ===== ДОБАВЛЕНИЕ GIF
                 gifUrl = await search_gif_mes(ctx=ctx)
                 GifService.add_new_gif(gif=Gif.Gif(groupId=gifGroup.groupId, gifUrl=gifUrl))
-                await _dialog.message.bomb_message(ctx=ctx, message='добавлено в <{0}>'.format(gifGroup.name))
+                await _dialog.message.bomb_message(ctx=ctx, message=f'добавлено в <{gifGroup.name}>')
 
             elif words[0] == 'page':    # ===== ВЫВОД 10 GIF
                 if not words[2].isdigit():
@@ -361,13 +372,13 @@ async def t(ctx: discord.ext.commands.Context, *words):
                 GifService.delete_all_gif_by_group_id(groupId=gifGroup.groupId)
                 GifGroupService.delete_gif_group_by_id(groupId=gifGroup.groupId)
                 await _dialog.message.bomb_message(ctx=ctx,
-                                                   message='Ключевое слово <{0}> удалено'.format(gifGroup.name))
+                                                   message=f'Ключевое слово <{gifGroup.name}> удалено')
 
             elif words[0] == 'delete':          # ===== УДАЛЕНИЕ GIF
                 if not words[2].isdigit():
                     raise ValueError('число введено неверно')
                 GifService.delete_gif_by_group_id_and_index(groupId=gifGroup.groupId, index=int(words[2]))
-                await _dialog.message.bomb_message(ctx=ctx, message='гиф удалена из <{0}>'.format(gifGroup.name))
+                await _dialog.message.bomb_message(ctx=ctx, message=f'gif удалена из <{gifGroup.name}>')
 
     except ValueError as valErr:
         await _dialog.message.bomb_message(ctx=ctx, message=str(valErr), type='error')
@@ -545,7 +556,7 @@ async def guild_help(ctx: discord.ext.commands.Context):
 # Выводит все настройки сервера
 @guild.command(name='show')
 async def show(ctx: discord.ext.commands.Context):
-    await ctx.send(content='```{0}```'.format(DBGuilds[ctx.guild.id]))
+    await ctx.send(content=f'```{DBGuilds[ctx.guild.id]}```')
 
 
 # Выводит все настройки сервера
@@ -602,7 +613,7 @@ async def set_param(ctx: discord.ext.commands.Context, *words):
             else:
                 await message.bomb_message(ctx=ctx, message='Данная настройка в данное время недоступна ', type='error')
                 return
-            await message.bomb_message(ctx=ctx, message='Настройка {0} обновлена'.format(words[0]))
+            await message.bomb_message(ctx=ctx, message=f'Настройка {words[0]} обновлена')
 
     except ValueError as valErr:
         await _dialog.message.bomb_message(ctx=ctx, message=str(valErr), type='error')
@@ -697,7 +708,7 @@ async def guilds(ctx: discord.ext.commands.Context):
 # Выводит все настройки системы
 @sys.command(name='show')
 async def show(ctx: discord.ext.commands.Context):
-    await ctx.send(content='```{0}```'.format(DBGeneralSettings))
+    await ctx.send(content=f'```{DBGeneralSettings}```')
 
 
 # Изменение общих настроек
@@ -708,7 +719,7 @@ async def set_param(ctx: discord.ext.commands.Context, *words):
     else:
         DBGeneralSettings.__dict__[words[0]] = int(words[1])
         GeneralSettingsService.update_general_settings(generalSettings=DBGeneralSettings)
-        await message.bomb_message(ctx=ctx, message='Настройка {0} обновлена'.format(words[0]))
+        await message.bomb_message(ctx=ctx, message=f'Настройка {words[0]} обновлена')
 
 
 # команда завершения работы
@@ -749,7 +760,7 @@ async def update_counters(discordGuild):
         return
     memberCounterChannel = discord.utils.get(discordGuild.text_channels,
                                              id=DBGuilds[discordGuild.id].membersCounterChatId)
-    await memberCounterChannel.edit(name='Участников: {0}'.format(discordGuild.member_count))
+    await memberCounterChannel.edit(name=f'Участников: {discordGuild.member_count}')
 
 
 async def update_data_loop():
@@ -764,6 +775,15 @@ async def update_write_time():
     lastWriteTime = datetime.strftime(datetime.utcnow(), "%Y-%m-%d %H:%M:%S")
     with open('configs/ShutdownInfo.txt', 'w') as TF:
         TF.write(lastWriteTime)
+
+
+# выводит для печати информацию о глобальных переменных
+def get_system_check_log():
+    answer = f'guilds: {"none" if DBGuilds is None else len(DBGuilds.keys())}\n'
+    answer += f'general settings: {"none" if DBGeneralSettings is None else "loaded"}\n'
+    answer += f'last write time: {lastWriteTime}\n'
+    answer += f'users in voice chats: {"null" if usersInVoiceChats is None else len(usersInVoiceChats.keys())}'
+    return answer
 
 
 if __name__ == '__main__':

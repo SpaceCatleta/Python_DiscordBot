@@ -40,7 +40,7 @@ def get_gif_group_by_id(groupId: int):
 def get_gif_group_by_name(name: str):
     row: sql.Row = Repos.get_gif_group_by_name(name=name)
     if row is None:
-        raise ValueError('Данное ключевое слово не найдено')
+        raise ValueError(f'Ключевое слово <{name}> не найдено')
     return GifGroup(groupId=row[0], authorId=row[1], createDate=row[2],
                     accessLevel=row[3], groupType=row[4], name=row[5], phrase=row[6])
 
