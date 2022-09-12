@@ -631,20 +631,21 @@ async def edit_level(ctx: discord.ext.commands.Context, *words):
             raise ValueError('Уровень введён неверно')
 
         levelNum = int(words[1])
-        roleId = messagesProcessing.get_role(ctx=ctx, bufferParts=4).id
-        levelRole = LevelRole.LevelRole(guildId=guildId, level=levelNum, roleId=roleId)
 
         if words[0] == 'set':
+            roleId = messagesProcessing.get_role(ctx=ctx, bufferParts=4).id
+            levelRole = LevelRole.LevelRole(guildId=guildId, level=levelNum, roleId=roleId)
+
             if levelNum in DBGuilds[guildId].levelsMap.keys():
                 LevelRoleService.update_level_role(levelRole=levelRole)
-
             else:
                 LevelRoleService.add_level_role(levelRole=levelRole)
+
             DBGuilds[guildId].levelsMap[levelNum] = roleId
             await _dialog.message.bomb_message(ctx=ctx, message='роль установлена')
 
         elif words[0] == 'delete':
-            LevelRoleService.delete_level_role(levelRole=levelRole)
+            LevelRoleService.delete_level_role_by_guild_id_and_level(guildId=guildId, level=levelNum)
             if levelNum in DBGuilds[guildId].levelsMap.keys():
                 DBGuilds[guildId].levelsMap.pop(levelNum)
             await _dialog.message.bomb_message(ctx=ctx, message='роль удалена')

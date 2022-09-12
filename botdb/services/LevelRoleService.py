@@ -35,6 +35,8 @@ def update_level_role(levelRole: LevelRole):
 def delete_level_role(levelRole: LevelRole):
     Repos.delete_level_role(levelRole=levelRole)
 
+def delete_level_role_by_guild_id_and_level(guildId: int, level: int):
+    delete_level_role(LevelRole(guildId=guildId, level=level, roleId=None))
 
 def delete_level_roles_by_guild_id(guildId: int):
     Repos.delete_level_roles_by_guild_id(guildId=guildId)
