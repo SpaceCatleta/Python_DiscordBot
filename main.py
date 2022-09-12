@@ -10,7 +10,7 @@ from configs import con_config
 
 from functions import simple as simpleFunctions
 import math
-import discord
+import discord.ext.pages
 import asyncio
 from discord.ext import commands
 from dateutil.tz import tzoffset
