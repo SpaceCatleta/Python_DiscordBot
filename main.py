@@ -712,17 +712,21 @@ async def activity_afk(ctx: discord.ext.commands.Context, *words):
     except ValueError:
         await _dialog.message.bomb_message(ctx=ctx, message='неверный ввод', type='error')
 
+    members_list = tuple(filter(lambda val: not val.bot, ctx.guild.members))
+    members_dict = {val.id: val for val in members_list}
+
     idList = ActivityLogService.get_afk_users_id_after_date(
         guild_id=ctx.guild.id, daysToCheck=daysToCheck,
-        guildMembersIdList=tuple(val.id for val in ctx.guild.members))
+        guildMembersIdList=tuple(val.id for val in members_list))
 
     size = len(idList)
     outLen = outLen if outLen <= size else size
     idList = idList[:outLen]
-    text = '\n'.join(map(str, idList))
-    await ctx.send(f'```За последние {daysToCheck} дней\n'
+    # text = '\n'.join(map(str, idList))
+    text = '\n'.join(tuple(members_dict[val].mention for val in idList))
+    await ctx.send(f'За последние {daysToCheck} дней\n'
                    f'Найдено неактивных пользователей : {size}\n'
-                   f'id {outLen} неактивных:\n{text}```')
+                   f'id {outLen} неактивных:\n{text}')
 
 
 # ======================================================================================================================
