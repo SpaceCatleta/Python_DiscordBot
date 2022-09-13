@@ -66,7 +66,7 @@ async def on_ready():
 
     except ValueError as valErr:
         print('Обработана ошибка:\n' + str(valErr))
-        await _dialog.message.log(message=' ошибка при чтении времини, будет только перезаписано время')
+        await _dialog.message.log(message=' ошибка при чтении времени, будет только перезаписано время')
         await update_write_time()
 
     message.generalSettings = DBGeneralSettings
@@ -88,21 +88,19 @@ async def on_message(mes: discord.Message):
         return
     count = messagesProcessing.text_len(mes.content)
 
-    if (count > 500):
+    if count > 500:
         await _dialog.message.log(author=mes.author, message=mes.content)
 
+    if mes.channel.id in DBGuilds[mes.guild.id].spamChannels:
 
-    if(mes.channel.id in DBGuilds[mes.guild.id].spamChannels):
-
-        ActivityLogService.logOneSpamMessage(guildId=mes.guild.id, userId=mes.author.id,
-                                         period=datetime.now().date(), symbolsCount=count)
+        ActivityLogService.logOneSpamMessage(
+            guildId=mes.guild.id, userId=mes.author.id, period=datetime.now().date(), symbolsCount=count)
         # Пуск команд
         try:
             await asyncio.wait_for(bot.process_commands(message=mes), timeout=DBGeneralSettings.timeUntilTimeout)
         except asyncio.TimeoutError:
             await mes.channel.send('```timeout```')
         return
-
 
     # Проверка уровня
     if UserService.append_stats_on_messages_with_level_check(userId=mes.author.id, mesCount=1, symbolsCount=count,
@@ -266,6 +264,7 @@ async def stats(ctx: discord.ext.commands.Context, *words):
     await _dialog.message.log(author=ctx.author, message='вызов статистики', ctx=ctx, params=words)
 bot.command(name="stat", pass_context=True)(stats.callback)
 
+
 # Показывает статистику указанного пользователя
 @bot.command(name='daystats')
 async def stats(ctx: discord.ext.commands.Context, *words):
@@ -292,7 +291,7 @@ async def t(ctx: discord.ext.commands.Context, *words):
         await _dialog.message.bomb_message(ctx=ctx, message='Данная функция вам недоступна', type='error')
         return
 
-    await _dialog.message.log(author=ctx.author, message='вызов команды тригера', ctx=ctx, params=words)
+    await _dialog.message.log(author=ctx.author, message='вызов команды триггера', ctx=ctx, params=words)
     """-t [комманда] [ключевое слово] [параметры]"""
 
     try:
@@ -427,15 +426,15 @@ async def clear_messages(ctx: discord.ext.commands.Context, *words):
         discordUser = messagesProcessing.get_user_link_no_exception(ctx=ctx)
         isDeleteExp = False
 
-        if(len(words) > 1):
-            if(words[1] == '-exp'):
+        if len(words) > 1:
+            if words[1] == '-exp':
                 isDeleteExp = True
 
         print(f'messagesToDelete: {messagesToDelete}')
         print(f'discordUser: {discordUser}')
         print(f'isDeleteExp: {isDeleteExp}')
 
-        await messagesProcessing.delete_messages(bot, ctx=ctx, n = messagesToDelete,
+        await messagesProcessing.delete_messages(bot, ctx=ctx, n=messagesToDelete,
                                                  discordUser=discordUser, isDeleteExp=isDeleteExp)
 
     except ValueError as valErr:
@@ -452,7 +451,7 @@ async def exp(ctx: discord.ext.commands.Context, *words):
 
         discordUser = messagesProcessing.get_user_link(ctx=ctx)
         UserService.add_user_exp_modifier2(userId=discordUser.id, exp=expChanging, expModifier=expChanging)
-        # Это вставка из -level для уточнения уровняы
+        # Это вставка из -level для уточнения уровня
         DBUser = UserService.get_user_by_id(userId=discordUser.id)
         DBUser.exp = exp_from_stats2(UStats=DBUser)
         DBUser.level = get_level_from_exp(exp=DBUser.exp)
@@ -547,6 +546,8 @@ async def voice_mute(ctx: discord.ext.commands.Context):
 @commands.has_guild_permissions(ban_members=True)
 async def guild(ctx: discord.ext.commands.Context):
     await ctx.message.delete()
+    await _dialog.message.log(author=ctx.author, message='Воспользовался командой настроек сервера',
+                              params=ctx.message.content.split(' '))
 
 
 @guild.command(name='help')
@@ -566,7 +567,7 @@ async def spam(ctx: discord.ext.commands.Context):
     guildId = ctx.guild.id
     channelId = ctx.channel.id
 
-    if(SpamChannelsService.is_exist(guildId=guildId, channelId=channelId)):
+    if SpamChannelsService.is_exist(guildId=guildId, channelId=channelId):
         SpamChannelsService.delete_by_id(guildId=guildId, channelId=channelId)
         DBGuilds[guildId].spamChannels.remove(channelId)
 
@@ -578,7 +579,6 @@ async def spam(ctx: discord.ext.commands.Context):
 
         await _dialog.message.log(author=ctx.author, message='Добавил канал в список спама')
         await _dialog.message.bomb_message(ctx=ctx, message='Канал добавлен в список спама')
-
 
 
 # Изменение настройки сервера
@@ -694,6 +694,8 @@ async def update_levels(ctx: discord.ext.commands.Context):
 @commands.has_guild_permissions(manage_channels=True)
 async def activity(ctx: discord.ext.commands.Context):
     await ctx.message.delete()
+    await _dialog.message.log(author=ctx.author, message='Воспользовался командой статистики',
+                              params=ctx.message.content.split(' '))
 
 
 @activity.command(name='help')
@@ -702,25 +704,25 @@ async def activity_help(ctx: discord.ext.commands.Context):
 
 
 @activity.command(name='afk')
-async def sys_help(ctx: discord.ext.commands.Context, *words):
+async def activity_afk(ctx: discord.ext.commands.Context, *words):
     daysToCheck, outLen = 0, 10
     try:
         daysToCheck = int(words[0])
-        if len(words) > 1:
-            outLen = int(words[1])
+        outLen = int(words[1]) if len(words) > 1 else 10
     except ValueError:
-        await _dialog.message.bomb_message(ctx=ctx, message='неверный воод', type='error')
+        await _dialog.message.bomb_message(ctx=ctx, message='неверный ввод', type='error')
 
     idList = ActivityLogService.get_afk_users_id_after_date(
         guild_id=ctx.guild.id, daysToCheck=daysToCheck,
         guildMembersIdList=tuple(val.id for val in ctx.guild.members))
 
     size = len(idList)
-    idList = idList if size <= outLen else idList[:outLen-1]
+    outLen = outLen if outLen <= size else size
+    idList = idList[:outLen]
     text = '\n'.join(map(str, idList))
-    await ctx.send(f'``` За последние {daysToCheck} дней\n'
-                   f' Всего неактивных пользователей: {size}\n'
-                   f' id {outLen} неактивных:\n{text}```')
+    await ctx.send(f'```За последние {daysToCheck} дней\n'
+                   f'Найдено неактивных пользователей : {size}\n'
+                   f'id {outLen} неактивных:\n{text}```')
 
 
 # ======================================================================================================================
@@ -733,6 +735,8 @@ async def sys_help(ctx: discord.ext.commands.Context, *words):
 @commands.has_guild_permissions(ban_members=True)
 async def sys(ctx: discord.ext.commands.Context):
     await ctx.message.delete()
+    await _dialog.message.log(author=ctx.author, message='Воспользовался системной командой',
+                              params=ctx.message.content.split(' '))
 
 
 @sys.command(name='help')
@@ -793,7 +797,7 @@ def exp_from_stats(symbols: int, messages: int, time: int, expMod: float):
 
 def exp_from_stats2(UStats: User.User):
     return exp_from_stats(symbols=UStats.symbolsCount, messages=UStats.messagesCount,
-                          time=UStats.voiceChatTime,expMod=UStats.expModifier)
+                          time=UStats.voiceChatTime, expMod=UStats.expModifier)
 
 
 async def update_counters(discordGuild):
