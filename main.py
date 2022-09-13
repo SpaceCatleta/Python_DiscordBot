@@ -691,7 +691,7 @@ async def update_levels(ctx: discord.ext.commands.Context):
 
 # Общая функция группы
 @bot.group(name='activity')
-@commands.has_guild_permissions(ban_members=True)
+@commands.has_guild_permissions(manage_channels=True)
 async def activity(ctx: discord.ext.commands.Context):
     await ctx.message.delete()
 
