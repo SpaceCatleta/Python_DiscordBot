@@ -79,3 +79,13 @@ def logVoiceChatTime(guildId: int, userId: int, period: datetime.date, periodTim
     else:
         Repos.update(entity=entity)
         # print("voice update log")
+
+
+def get_afk_users_id_after_date(guild_id: int, daysToCheck: int, guildMembersIdList) -> tuple:
+    date = datetime.datetime.utcnow() - datetime.timedelta(days=daysToCheck)
+    date = datetime.datetime.strftime(date, "%Y-%m-%d")
+
+    id_list = Repos.get_active_users_id_after_date(guild_id=guild_id, date=date)
+    print(f'all non afk users count:   {len(id_list)}')
+    print(id_list)
+    return tuple(filter(lambda val: val not in id_list, guildMembersIdList))

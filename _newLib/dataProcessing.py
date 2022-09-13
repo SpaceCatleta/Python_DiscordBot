@@ -61,7 +61,7 @@ def user_stat_embed(ctx, funcX) -> discord.Embed:
     nextLevelExp = funcX(DBUSer.level + 1)
     emb: discord.Embed = discord.Embed(color=discord.colour.Color.dark_magenta(),
                                        title='Пользователь {0}:'.format(user.display_name))
-    emb.set_thumbnail(url=user.avatar_url)
+    emb.set_thumbnail(url=user.avatar.url)
     emb.add_field(name='Уровень:', value=str(DBUSer.level))
     emb.add_field(name='Опыт:', value='{0}/{1}'.format(round(DBUSer.exp, 1), nextLevelExp))
     if DBUSer.expModifier != 0:
@@ -69,9 +69,10 @@ def user_stat_embed(ctx, funcX) -> discord.Embed:
         emb.add_field(name=fieldName, value=str(DBUSer.expModifier))
     emb.add_field(name='Статистика:', value='Отправлено сообщений: {0}\nНапечатано символов: {1}\
     \nВремя в голосовых чатах:{2}'.format(DBUSer.messagesCount, DBUSer.symbolsCount,
-                                          time.strftime("%dд::%H:%M:%S", time.gmtime(DBUSer.voiceChatTime)).
+                                          seconds_to_str(DBUSer.voiceChatTime, True).
                                           replace(' ', '')), inline=False)
     return emb
+
 
 # Возващает статистику пользователя для Embed
 def user_activity_embed(ctx) -> discord.Embed:
@@ -92,6 +93,7 @@ def user_activity_embed(ctx) -> discord.Embed:
 
     return emb
 
+
 def seconds_to_str(seconds: float, checkDays =  False):
     minutes = int(seconds / 60)
     seconds -= minutes * 60
@@ -99,18 +101,17 @@ def seconds_to_str(seconds: float, checkDays =  False):
     hours = int(minutes / 60)
     minutes -= hours * 60
 
-    answer = f'{hours}:{minutes}:{seconds}'
-
     if checkDays:
         days = int(hours / 24)
         hours -= days * 24
-        answer = f'{days}д:' + answer
+        answer = f'{days}д:{hours}:{minutes}:{int(seconds)}'
+    else:
+        answer = f'{hours}:{minutes}:{int(seconds)}'
 
     return answer
 
 
-
-# обновляет статистику из гс
+# обновляет статистику из голосовых каналов
 async def voice_stats_update(bot, member: discord.Member, before: discord.VoiceState, after: discord.VoiceState,
                              usersInVoice: dict):
     if before.channel is None:

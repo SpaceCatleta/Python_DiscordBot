@@ -51,6 +51,18 @@ def get_count():
     return answer
 
 
+def get_active_users_id_after_date(guild_id: int, date: str) -> tuple:
+    connection, cursor = DB.get_connection()
+    cursor.execute("""SELECT a.user_id FROM activity_log a
+                    WHERE a.guild_id = :guild_id
+                    and a.period >= :date
+                    GROUP BY a.user_id""", (guild_id, date))
+    rows = cursor.fetchall()
+    DB.close_connection(connection, cursor)
+
+    return tuple(int(row[0]) for row in rows)
+
+
 # ====UPDATE============================
 def update(entity: ActivityLog):
     connection, cursor = DB.get_connection()

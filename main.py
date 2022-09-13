@@ -18,6 +18,7 @@ from datetime import datetime
 
 # Так как мы указали префикс в settings, обращаемся к словарю с ключом prefix.
 intents = discord.Intents.all()
+intents.members = True
 bot = commands.Bot(command_prefix=con_config.settings['prefix'], intents=intents)
 
 DBGuilds: dict
@@ -681,6 +682,45 @@ async def update_levels(ctx: discord.ext.commands.Context):
                                              exp=DBUser.exp)
 
     await _dialog.message.bomb_message(ctx=ctx, message=f'обновлено пользователей {i}')
+
+
+# ======================================================================================================================
+# ГРУППА КОММАНД СТАТИСТИКИ АКТИВНОСТИ
+# ======================================================================================================================
+
+
+# Общая функция группы
+@bot.group(name='activity')
+@commands.has_guild_permissions(ban_members=True)
+async def activity(ctx: discord.ext.commands.Context):
+    await ctx.message.delete()
+
+
+@activity.command(name='help')
+async def activity_help(ctx: discord.ext.commands.Context):
+    await ctx.send(textFileProcessing.RadAll(filename='information/activity_com_help.txt'))
+
+
+@activity.command(name='afk')
+async def sys_help(ctx: discord.ext.commands.Context, *words):
+    daysToCheck, outLen = 0, 10
+    try:
+        daysToCheck = int(words[0])
+        if len(words) > 1:
+            outLen = int(words[1])
+    except ValueError:
+        await _dialog.message.bomb_message(ctx=ctx, message='неверный воод', type='error')
+
+    idList = ActivityLogService.get_afk_users_id_after_date(
+        guild_id=ctx.guild.id, daysToCheck=daysToCheck,
+        guildMembersIdList=tuple(val.id for val in ctx.guild.members))
+
+    size = len(idList)
+    idList = idList if size <= outLen else idList[:outLen-1]
+    text = '\n'.join(map(str, idList))
+    await ctx.send(f'``` За последние {daysToCheck} дней\n'
+                   f' Всего неактивных пользователей: {size}\n'
+                   f' id {outLen} неактивных:\n{text}```')
 
 
 # ======================================================================================================================
