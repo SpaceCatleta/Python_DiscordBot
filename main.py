@@ -352,7 +352,7 @@ async def t(ctx: discord.ext.commands.Context, *words):
                 await _dialog.message.bomb_message(ctx=ctx, message='фраза изменена')
 
             elif words[0] == 'rename':  # ===== ПЕРЕИМЕНОВЫВАЕНИЕ ГРУППЫ
-                newName = words[1].lower()
+                newName = words[2].lower()
                 gifGroup.name = newName
                 GifGroupService.update_gif_group(gifGroup=gifGroup)
                 await _dialog.message.bomb_message(ctx=ctx, message='ключевое слово изменено')
