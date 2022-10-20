@@ -1,2 +1,4 @@
 discord2
 python-dateutil
+requests
+beautifulsoup4

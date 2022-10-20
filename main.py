@@ -15,6 +15,8 @@ import asyncio
 from discord.ext import commands
 from dateutil.tz import tzoffset
 from datetime import datetime
+from botParsers.vk import dataToEmbed
+from botParsers.vk import parse as botParsing
 
 # Так как мы указали префикс в settings, обращаемся к словарю с ключом prefix.
 intents = discord.Intents.all()
@@ -280,6 +282,17 @@ async def stats(ctx: discord.ext.commands.Context, *words):
     await ctx.message.delete()
     await ctx.send(f'```{get_system_check_log()}```')
     await _dialog.message.log(author=ctx.author, message='проверка состояния', ctx=ctx, params=words)
+
+
+# парсит запись VK
+@bot.command(name='vk')
+async def vk(ctx: discord.ext.commands.Context, *words):
+    await ctx.message.delete()
+    if 'https://vk.com/wall' != words[0][:19]:
+        await _dialog.message.bomb_message(ctx=ctx, message='ссылка должна указывать на запись', type='error')
+        return
+    await ctx.send(embed=dataToEmbed.vk_post_to_embed(botParsing.parse_vk_post(words[0])))
+    await _dialog.message.log(author=ctx.author, message='срабатывание парсера', ctx=ctx, params=words)
 
 
 # Команда триггеров
