@@ -851,7 +851,7 @@ async def update_data_loop():
 # обновляет время последней записи
 async def update_write_time():
     global lastWriteTime
-    lastWriteTime = datetime.strftime(datetime.utcnow(), "%Y-%m-%d %H:%M:%S")
+    lastWriteTime = datetime.strftime(datetime.now(), "%Y-%m-%d %H:%M:%S")
     with open('configs/ShutdownInfo.txt', 'w') as TF:
         TF.write(lastWriteTime)
 
