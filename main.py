@@ -5,7 +5,8 @@ from botdb.services import LevelRoleService
 
 from _dialog import message
 import _dialog
-from _newLib import dataProcessing, messagesProcessing, usersProcessing, textFileProcessing, dataBaseProcessing
+from _newLib import dataProcessing, messagesProcessing, usersProcessing, textFileProcessing, dataBaseProcessing,\
+    translateRequest, discordColors
 from configs import con_config
 
 from functions import simple as simpleFunctions
@@ -293,6 +294,22 @@ async def vk(ctx: discord.ext.commands.Context, *words):
         return
     await ctx.send(embed=dataToEmbed.vk_post_to_embed(botParsing.parse_vk_post(words[0])))
     await _dialog.message.log(author=ctx.author, message='срабатывание парсера', ctx=ctx, params=words)
+
+
+# Переводит переданный текст на русский (язык определяется автоматически вызываемым сервисом гугла)
+@bot.command()
+async def translate(ctx: discord.ext.commands.Context, *words):
+    await ctx.message.delete()
+    inputText = ' '.join(words)
+    translation = translateRequest.request_googleapis_translate_a(text=inputText)
+
+    embed: discord.Embed = discord.Embed(color=discordColors.magenta)
+    embed.add_field(name='исходный текст:', value=inputText, inline=False)
+    embed.add_field(name='перевод:', value=translation, inline=False)
+
+    await ctx.send(embed=embed)
+
+bot.command(name="tr", pass_context=True)(translate.callback)
 
 
 # Команда триггеров
